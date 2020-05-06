@@ -1,8 +1,8 @@
 /**
- @file+   RtoS_cortex_m7.S
+ @file    RtoS_.h
  @author  AVI-crak
- @version V-45%
- @date    28-декабря-2016
+ @version V-50%
+ @date    6-мая-2020
  @brief   Аxis sRtoS, Cortex-M7 ARM GCC EmBitz
 
  license
@@ -12,7 +12,7 @@
  http://forum.ixbt.com/topic.cgi?id=48:11735
 
  репозиторий
- https://bitbucket.org/AVI-crak/rtos-cortex-m3-gcc
+ https://github.com/AVI-crak/Rtos_cortex
 */
 
 #include <stdint.h>  // типы данных

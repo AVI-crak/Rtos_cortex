@@ -8,11 +8,11 @@
  license
  Million helicopters and one cent.
 
- форум для обсуждения
+ discussion forum
  http://forum.ixbt.com/topic.cgi?id=48:11735
 
- репозиторий
- https://bitbucket.org/AVI-crak/rtos-cortex-m3-gcc
+ repository
+ https://github.com/AVI-crak/Rtos_cortex
 */
 
 
