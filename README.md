@@ -16,13 +16,15 @@
 
 Запуск Ос однократный из **main()** функцией **os_Run()**. До запуска необходимо по возможности настроить всю периферию, для этих целей существует  **SystemInit()**.
 Для того чтобы не бороться с ветряными мельницами, стек **main()** был принудительно смещён вниз на размер стека прерываний **_irqsize**, относительно **_estack** - который задаётся в таблице прерываний. Для файла startup_stm32fxxxx.s необходимо добавить и изменить строки:
-> .equ   _irqsize, 600
+'''
+ .equ   _irqsize, 600
  .equ   _main_stask,         ( _estack -   ((_irqsize + 200) & 0xFFFFFFF8))
-> .equ   _irq_stack,          _estack
- 
+ .equ   _irq_stack,          _estack
+'''
+
     g_pfnVectors:
- 
->  .word  **_main_stask**             /* изменить              */
+''' 
+  .word  **_main_stask**             /* изменить              */
   .word  Reset_Handler
   .word  NMI_Handler
   .word  HardFault_Handler
@@ -37,7 +39,8 @@
   .word  DebugMon_Handler
   .word  0
   .word  PendSV_Handler
->  .word  SysTick_Handler
+  .word  SysTick_Handler
+'''  
   
   Если g_pfnVectors не имеет пробелов в местах модификаций - то придётся менять часть алгоритма последующей обработки. Это не так сложно как кажется.
 
