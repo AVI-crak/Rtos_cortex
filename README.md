@@ -24,16 +24,16 @@
 
     g_pfnVectors:
  
-    .word  **_main_stask**             /* изменить              */
+    .word  _main_stask             /* изменить              */
     .word  Reset_Handler
     .word  NMI_Handler
     .word  HardFault_Handler
     .word  MemManage_Handler
     .word  BusFault_Handler
     .word  UsageFault_Handler
-    .word  **_irq_stack**              /* добавить              */
-    .word  **_irqsize**                /* добавить              */
-    .word  **_ebss**                   /* добавить              */
+    .word  _irq_stack              /* добавить              */
+    .word  _irqsize                /* добавить              */
+    .word  _ebss                   /* добавить              */
     .word  0
     .word  SVC_Handler
     .word  DebugMon_Handler
