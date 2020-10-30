@@ -1,8 +1,8 @@
 /**
- @file    RtoS_.h
+ @file+   RtoS_cortex_m7.S
  @author  AVI-crak
- @version V-50%
- @date    6-мая-2020
+ @version V-45%
+ @date    28-декабря-2016
  @brief   Аxis sRtoS, Cortex-M7 ARM GCC EmBitz
 
  license
@@ -12,7 +12,7 @@
  http://forum.ixbt.com/topic.cgi?id=48:11735
 
  репозиторий
- https://github.com/AVI-crak/Rtos_cortex
+ https://bitbucket.org/AVI-crak/rtos-cortex-m3-gcc
 */
 
 #include <stdint.h>  // типы данных
@@ -122,7 +122,7 @@ int32_t os_alarm_ms(int32_t * timer_name, int32_t timer_ms);
 /// пример
 /// static int32_t alarm_mc1; os_tim_mc(&alarm_mc1,1000);
 /// активное состояние 0-999мс, сон 999-1мс, цикл 1с
-int32_t os_tim_ms(int32_t * timer_name, int32_t timer_mc);
+int32_t os_tim_ms(int32_t* timer_name, int32_t timer_mc);
 
 
 
@@ -135,13 +135,13 @@ void *os_malloc(int32_t size );
 void os_free (void* malloc_adres);
 
 
-/// sTask_wake (& глобальный флаг) разбудить задачу
-//void sTask_wake(volatile uint32_t* task_global_flag);
+/// Разбудить задачу
+void os_wake(volatile uint8_t* global_task_nomer);
 
 
 
-/// sTask_wait (& глобальный флаг) остановить задачу в ожидание пинка
-//void sTask_wait(volatile uint32_t* task_global_flag);
+/// Остановить задачу в ожидание пинка
+void os_freeze(volatile uint8_t* global_task_nomer);
 
 
 

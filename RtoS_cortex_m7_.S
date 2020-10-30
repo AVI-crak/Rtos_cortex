@@ -1,9 +1,9 @@
-/**
- @file    RtoS_cortex_m7_.S
- @author  AVI-crak
- @version V-50%
- @date    6-мая-2020
- @brief   Аxis sRtoS, Cortex-M7 ARM GCC EmBitz
+/*
+ @file    RtoS_cortex_m7.S
+ @author  AVI_crak
+ @version V-0.13
+ @date    1-january-2020
+ @brief   RTOS
 
  license
  Million helicopters and one cent.
@@ -12,11 +12,9 @@
  http://forum.ixbt.com/topic.cgi?id=48:11735
 
  repository
- https://github.com/AVI-crak/Rtos_cortex
+ https://bitbucket.org/AVI-crak/rtos-cortex-m3-gcc
+
 */
-
-
-
  .syntax unified
  .cpu cortex-m7
  .arch armv7e-m
@@ -42,7 +40,7 @@ SVC_Table:
 	.hword	((__ret_service - SVC_Table)/2)		// 3
 	.hword	((__to_service - SVC_Table)/2)		// 4
 	.hword	((__wake - SVC_Table)/2)			// 5
-	.hword	((__task_freeze - SVC_Table)/2)		// 6
+	.hword	((__freeze - SVC_Table)/2)		    // 6
 	.hword	((__task_new - SVC_Table)/2)		// 7
 	.hword	((__delete_task - SVC_Table)/2)		// 8
 	.hword	((__EnableIRQ - SVC_Table)/2)		// 9
@@ -69,10 +67,8 @@ __to_service:	// task_status уже содержит код операции, sw
 			b		__switch_rxx
 
 
-__task_freeze:
+__freeze:
 			ldr		r0, [r12]				// активная задача
-			mov		r2, #4					// task_status task_hold
-			strb	r2, [r0, #39]
 			mov		r3, #8					// list nomer hold
 			b		__switch_rxx
 
@@ -204,7 +200,7 @@ __ret_service:
 			pop		{r4, pc}
 
 
-__wake: // r0(глобал флаг - адрес *uint8_t номер задачи) разбудить
+__wake: // r0(uint8_t* global_task_nomer) разбудить
 			mov		r3, r0
 			ldr		r0, [r12, #8]			// Адрес задачь ожидающих пинка
 			cmp		r0, #0

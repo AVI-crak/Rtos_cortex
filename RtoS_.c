@@ -1,18 +1,18 @@
 /**
- @file    RtoS_.c
+ @file    RtoS_cortex_m7.S
  @author  AVI-crak
- @version V-50%
- @date    6-мая-2020
- @brief   Аxis sRtoS, Cortex ARM GCC EmBitz
+ @version V-45%
+ @date    28-декабря-2016
+ @brief   Аxis sRtoS, Cortex-M7 ARM GCC EmBitz
 
  license
  Million helicopters and one cent.
 
- discussion forum
+ форум для обсуждения
  http://forum.ixbt.com/topic.cgi?id=48:11735
 
- repository
- https://github.com/AVI-crak/Rtos_cortex
+ репозиторий
+ https://bitbucket.org/AVI-crak/rtos-cortex-m3-gcc
 */
 
 /// сборка 6752.124.540
@@ -29,6 +29,10 @@
 
 #define  __SYSHCLK     216000000
 #define  SERVISE_SIZE  500
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
+
+
 /// _estack - upper bound of memory
 ///	Add to startup_XXX.s
 /// .equ   _irqsize, 600 // Interrupt Stack Size
@@ -93,7 +97,7 @@ int32_t os_alarm_ms(int32_t * timer_name, int32_t timer_ms)
     return tim2;
 };
 
-int32_t os_tim_ms(int32_t * timer_name, int32_t timer_ms)
+int32_t os_tim_ms(int32_t* timer_name, int32_t timer_ms)
 {
     int32_t tim = os_data.system_us;
     int32_t tim2 = tim + *timer_name;
@@ -117,34 +121,36 @@ int32_t os_tim_ms(int32_t * timer_name, int32_t timer_ms)
 
 
 
-/*
 
-/// sTask_wake (& глобальный флаг) разбудить задачу
-void sTask_wake(volatile uint32_t* task_global_flag)
+
+/// Разбудить задачу
+void os_wake(volatile uint8_t* global_task_nomer)
 {
-    register volatile uint32_t   *__task_global_flag     asm  ("r0") = task_global_flag;
+    register volatile uint8_t   *__global_nomer     asm  ("r0") = global_task_nomer;
     asm volatile    ("push      {r3}        \n\t"
-                    "ldr        r3, [r0]    \n\t"
+                    "ldrb       r3, [r0]    \n\t"
                     "cmp        r3, #0      \n\t"
                     "itt        ne          \n\t"
-                    "movne      r3, 0x9     \n\t" //__sTask_wake //9;
+                    "movne      r3, #0x5    \n\t" //#5 __wake
                     "svcne      0x0         \n\t"
                     "pop        {r3}        \n\t"
-                    :: "r" (__task_global_flag):);
+                    :: "r" (__global_nomer):);
 }
 
 
-/// sTask_wait (& глобальный флаг) остановить задачу в ожидание пинка
-void sTask_wait(volatile uint32_t* task_global_flag)
+/// Остановить задачу в ожидание пинка
+void os_freeze(volatile uint8_t* global_task_nomer)
 {
-    register volatile uint32_t   *__task_global_flag     asm  ("r0") = task_global_flag;
-    asm volatile    ("push   {r3}               \n\t"
-                    "mov     r3, 0x8            \n\t" //__sTask_wait //8;
-                    "svc    0x0                 \n\t"
-                    "pop    {r3}                \n\t"
-                    :: "r" (__task_global_flag):"memory");
+    os_data.activ->swap_data = (uint32_t) global_task_nomer;
+    os_data.activ->task_mode = task_hold;
+    *global_task_nomer = os_data.activ->task_nomer;
+    asm volatile    ("push   {r3}                \n\t"
+                     "mov    r3, #0x6            \n\t" //#6 __freeze
+                     "svc    0x0                 \n\t"
+                     "pop    {r3}                \n\t"
+                      :::"memory");
 }
-*/
+
 
 
 
@@ -737,7 +743,7 @@ uint32_t os_Ranlom( uint32_t range)
 
 
 
-
+#pragma GCC pop_options
 
 
 
