@@ -8,11 +8,11 @@
  license
  Million helicopters and one cent.
 
- форум для обсуждения
+ discussion forum
  http://forum.ixbt.com/topic.cgi?id=48:11735
 
- репозиторий
- https://bitbucket.org/AVI-crak/rtos-cortex-m3-gcc
+ repository
+ https://github.com/AVI-crak/Rtos_cortex
 */
 
 
@@ -38,8 +38,6 @@ void monitor_print (char* text);
 /// Принять сообщение из EB monitor \n enter
 char *monitor_scan (void);
 
-/// Печать отладочной информации в EB monitor из os
-void monitor (void);
 uint32_t monitor_balance(void);
 
 

@@ -1,7 +1,7 @@
 /*
  @file    RtoS_cortex_m7.S
  @author  AVI_crak
- @version V-0.13
+ @version V-0.14
  @date    1-january-2020
  @brief   RTOS
 
@@ -12,7 +12,7 @@
  http://forum.ixbt.com/topic.cgi?id=48:11735
 
  repository
- https://bitbucket.org/AVI-crak/rtos-cortex-m3-gcc
+ https://github.com/AVI-crak/Rtos_cortex
 
 */
  .syntax unified

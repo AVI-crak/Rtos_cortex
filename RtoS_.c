@@ -1,27 +1,20 @@
 /**
  @file    RtoS_cortex_m7.S
  @author  AVI-crak
- @version V-45%
- @date    28-декабря-2016
- @brief   Аxis sRtoS, Cortex-M7 ARM GCC EmBitz
+ @version V-50%
+ @date    6-мая-2020
+ @brief   Аxis sRtoS, Cortex ARM GCC EmBitz
 
  license
  Million helicopters and one cent.
 
- форум для обсуждения
+ discussion forum
  http://forum.ixbt.com/topic.cgi?id=48:11735
 
- репозиторий
- https://bitbucket.org/AVI-crak/rtos-cortex-m3-gcc
+ repository
+ https://github.com/AVI-crak/Rtos_cortex
 */
 
-/// сборка 6752.124.540
-/// сборка 6704.124.540
-/// сборка 6728.124.540
-/// сборка 6704.124.540
-/// сборка 6500.124.540
-/// сборка 6496.124.540
-/// сборка 7432.184.300 - ser_new_ram
 
 
 #include "RtoS_.h"
