@@ -60,11 +60,11 @@ uint32_t os_resource_ask (uint32_t *name_resource)
     tmp = (uint32_t) os_data.activ;
     if ( *name_resource != 0 ) return *name_resource;
     os_data.activ->swap_data = (uint32_t) name_resource;
-    asm volatile    ("push   {r3}               \n\t"
-                    "mov     r3, 0x0B           \n\t" //#0B __os_res_ask
-                    "svc    0x0                 \n\t"
-                    "pop    {r3}                \n\t"
-                    :::"memory");
+    asm volatile ("push    {r3}         \n\t"
+                  "mov     r3, 0x0B     \n\t" //#0B __os_res_ask
+                  "svc     0x0          \n\t"
+                  "pop     {r3}         \n\t"
+                  :::"memory");
     tmp = os_data.activ->swap_data;
     return tmp;
 };
@@ -94,18 +94,15 @@ int32_t os_tim_ms(int32_t* timer_name, int32_t timer_ms)
 {
     int32_t tim = os_data.system_us;
     int32_t tim2 = tim + *timer_name;
-	if ( tim2 > timer_ms)
-	{
-	    /// таймер убежал далеко вперёд
-		*timer_name = 1 - (tim + timer_ms - (tim2 % timer_ms));
-    }else if (tim2 > 0)
+    if ( tim2 > timer_ms) /// таймер убежал далеко вперёд
     {
-        /// значение таймера достаточно для выполнения условия
+        *timer_name = 1 - (tim + timer_ms - (tim2 % timer_ms));
+    }else if (tim2 > 0)   /// значение таймера достаточно для выполнения условия
+    {
         *timer_name = 1 - (timer_ms + tim - tim2);
-    }else if ((timer_ms + tim2) < 0)
+    }else if ((timer_ms + tim2) < 0)  /// timer_name установлен на время превышающее timer_mc
     {
-        /// timer_name установлен на время превышающее timer_mc
-		*timer_name = 1 - (tim + timer_ms);
+        *timer_name = 1 - (tim + timer_ms);
     }else tim2 = 0;
     return tim2;
 };
@@ -120,14 +117,14 @@ int32_t os_tim_ms(int32_t* timer_name, int32_t timer_ms)
 void os_wake(volatile uint8_t* global_task_nomer)
 {
     register volatile uint8_t   *__global_nomer     asm  ("r0") = global_task_nomer;
-    asm volatile    ("push      {r3}        \n\t"
-                    "ldrb       r3, [r0]    \n\t"
-                    "cmp        r3, #0      \n\t"
-                    "itt        ne          \n\t"
-                    "movne      r3, #0x5    \n\t" //#5 __wake
-                    "svcne      0x0         \n\t"
-                    "pop        {r3}        \n\t"
-                    :: "r" (__global_nomer):);
+    asm volatile ("push    {r3}         \n\t"
+                  "ldrb    r3, [r0]     \n\t"
+                  "cmp     r3, #0       \n\t"
+                  "itt     ne           \n\t"
+                  "movne   r3, #0x5     \n\t" //#5 __wake
+                  "svcne   0x0          \n\t"
+                  "pop     {r3}         \n\t"
+                  :: "r" (__global_nomer):);
 }
 
 
@@ -137,11 +134,11 @@ void os_freeze(volatile uint8_t* global_task_nomer)
     os_data.activ->swap_data = (uint32_t) global_task_nomer;
     os_data.activ->task_mode = task_hold;
     *global_task_nomer = os_data.activ->task_nomer;
-    asm volatile    ("push   {r3}                \n\t"
-                     "mov    r3, #0x6            \n\t" //#6 __freeze
-                     "svc    0x0                 \n\t"
-                     "pop    {r3}                \n\t"
-                      :::"memory");
+    asm volatile ("push   {r3}          \n\t"
+                  "mov    r3, #0x6      \n\t" //#6 __freeze
+                  "svc    0x0           \n\t"
+                  "pop    {r3}          \n\t"
+                  :::"memory");
 }
 
 
@@ -153,11 +150,11 @@ void *os_malloc(int32_t d_size)
 {
     os_data.activ->task_mode = new_ram;
     os_data.activ->swap_data = (d_size + 7) >> 2;
-    asm volatile    ("push   {r3}               \n\t"
-                    "mov     r3, 0x04            \n\t" //#4 __to_service
-                    "svc    0x0                 \n\t"
-                    "pop    {r3}                \n\t"
-                    :::"memory");
+    asm volatile ("push   {r3}          \n\t"
+                  "mov    r3, 0x04      \n\t" //#4 __to_service
+                  "svc    0x0           \n\t"
+                  "pop    {r3}          \n\t"
+                  :::"memory");
     void* out; out = (void*) os_data.activ->swap_data;
 return out;
 }
@@ -166,11 +163,11 @@ return out;
 void os_Delay_ms(uint32_t delay_mc)
 {
     os_data.activ->swap_data = delay_mc;
-    asm volatile    ("push   {r3}               \n\t"
-                    "mov     r3, 0x02			\n\t" //#2 __delay_new
-                    "svc    0x0                 \n\t"
-                    "pop    {r3}                \n\t"
-                    ::: "memory");
+    asm volatile ("push   {r3}          \n\t"
+                  "mov    r3, 0x02      \n\t" //#2 __delay_new
+                  "svc    0x0           \n\t"
+                  "pop    {r3}          \n\t"
+                  ::: "memory");
 }
 
 
@@ -182,21 +179,21 @@ void os_Delay_ms(uint32_t delay_mc)
 
 struct _os_wbasic
 {
-    uint32_t* w_activ;                     ///#00- Список активных
-    uint32_t* w_delay;                     ///#04- Список спящих
-    uint32_t* w_hold;                      ///#08- Список замороженных
-    uint32_t* w_service;                   ///#12- Список обслуживания
-	uint32_t* w_task_switch;                ///#16- Новый/старый таск
-    uint32_t* w_nvic_stack;              ///#20- Адрес стека прерываний, Task maximum NVIC used stack
-    uint32_t  w_nvic_size_use;               ///#24- Размер стека прерываний,
-    uint32_t* w_main_stask;			///#28- Адрес стека main
-    uint32_t* w_use_task_stop;        ///#32- Последний адрес стека, Stack last address
-    uint32_t  w_tick_1ms;				///#36- Таймер активности задачи 100%, Task activity timer 100%
-    int32_t   w_system_us;      ///#40- Системное время, System time counter
-    uint32_t* w_malloc0_start;           ///#44- Первый адрес malloc0, First malloc0 address
-    uint32_t* w_malloc0_stop;          ///#48- Последний адрес malloc0, Last malloc0 address
-    uint32_t* w_malloc1_start;           ///#52- Первый адрес malloc1, First malloc1 address
-    uint32_t* w_malloc1_stop;          ///#56- Последний адрес malloc1, Last malloc1 address
+    uint32_t*  w_activ;                     ///#00- Список активных
+    uint32_t*  w_delay;                     ///#04- Список спящих
+    uint32_t*  w_hold;                      ///#08- Список замороженных
+    uint32_t*  w_service;                   ///#12- Список обслуживания
+    uint32_t*  w_task_switch;               ///#16- Новый/старый таск
+    uint32_t*  w_nvic_stack;                ///#20- Адрес стека прерываний, Task maximum NVIC used stack
+    uint32_t   w_nvic_size_use;             ///#24- Размер стека прерываний,
+    uint32_t*  w_main_stask;                ///#28- Адрес стека main
+    uint32_t*  w_use_task_stop;             ///#32- Последний адрес стека, Stack last address
+    uint32_t   w_tick_1ms;                  ///#36- Таймер активности задачи 100%, Task activity timer 100%
+    int32_t    w_system_us;                 ///#40- Системное время, System time counter
+    uint32_t*  w_malloc0_start;             ///#44- Первый адрес malloc0, First malloc0 address
+    uint32_t*  w_malloc0_stop;              ///#48- Последний адрес malloc0, Last malloc0 address
+    uint32_t*  w_malloc1_start;             ///#52- Первый адрес malloc1, First malloc1 address
+    uint32_t*  w_malloc1_stop;              ///#56- Последний адрес malloc1, Last malloc1 address
 };
 
 
@@ -204,46 +201,46 @@ struct _os_wbasic
 /// Replica isr_vector
 struct _my_isr_vector
 {
-  uint32_t  _main_stask;
-  void*  Reset_Handler;
-  void*  NMI_Handler;
-  void*  HardFault_Handler;
-  void*  MemManage_Handler;
-  void*  BusFault_Handler;
-  void*  UsageFault_Handler;
-  uint32_t*  _irq_stack;
-  uint32_t   _irqsize;
-  uint32_t*  _free_ram;
-  uint32_t*  _free_exram;
- // uint32_t  _nc;
-//  void*  SVC_Handler;
+    uint32_t   _main_stask;
+    void*      Reset_Handler;
+    void*      NMI_Handler;
+    void*      HardFault_Handler;
+    void*      MemManage_Handler;
+    void*      BusFault_Handler;
+    void*      UsageFault_Handler;
+    uint32_t*  _irq_stack;
+    uint32_t   _irqsize;
+    uint32_t*  _free_ram;
+    uint32_t*  _free_exram;
+//  uint32_t   _nc;
+//  void*      SVC_Handler;
 };
 
 //uintptr_t
 struct  task_argument
 {
-	uint32_t*	_func;
-	uint32_t	_size;
-	uint32_t	_time_rate;
-	char* 		_func_name;
+    uint32_t*  _func;
+    uint32_t   _size;
+    uint32_t   _time_rate;
+    char*      _func_name;
 };
 
 /// Новая задача - после запуска ос
 ///  функция , размер стека , процент времени 1-100 , имя
 uint32_t os_Task_new (void (*taskS_func),uint16_t task_size,uint8_t task_time_rate,char* const task_func_name)
 {
-	volatile struct  task_argument  data;
-	data._func = taskS_func;
-	data._size = (task_size + 7) & 0xFFFFFFF8;
-	data._time_rate = (os_data.tick_1ms * task_time_rate ) / 100;
-	data._func_name = task_func_name;
-	os_data.activ->task_mode = new_task;
-	os_data.activ->swap_data = (uint32_t) &data;
-    asm volatile    ("push   {r3}               \n\t"
-                    "mov     r3, 0x04            \n\t" //#4 __to_service
-                    "svc    0x0                 \n\t"
-                    "pop    {r3}                \n\t"
-                    :::"memory");
+    volatile struct  task_argument  data;
+    data._func = taskS_func;
+    data._size = (task_size + 7) & 0xFFFFFFF8;
+    data._time_rate = (os_data.tick_1ms * task_time_rate ) / 100;
+    data._func_name = task_func_name;
+    os_data.activ->task_mode = new_task;
+    os_data.activ->swap_data = (uint32_t) &data;
+    asm volatile ("push   {r3}          \n\t"
+                  "mov     r3, 0x04     \n\t" //#4 __to_service
+                  "svc    0x0           \n\t"
+                  "pop    {r3}          \n\t"
+                  :::"memory");
     uint32_t ret; ret = os_data.activ->swap_data;
     return ret;
 };
@@ -255,53 +252,53 @@ uint32_t os_Task_new (void (*taskS_func),uint16_t task_size,uint8_t task_time_ra
 void os_Run(const uint16_t main_size )
 {
 
-	struct _os_wbasic* _os_wb;
-	_os_wb = (struct _os_wbasic*) &os_data;
-	uint32_t main_sizel;
+    struct _os_wbasic* _os_wb;
+    _os_wb = (struct _os_wbasic*) &os_data;
+    uint32_t main_sizel;
     main_sizel = (main_size + 7) & 0x0000FFF8;
-	uint32_t _irq_tmp;
-	struct _my_isr_vector* isr_v;
+    uint32_t _irq_tmp;
+    struct _my_isr_vector* isr_v;
     isr_v = (struct _my_isr_vector*)SCB->VTOR;
-	_irq_tmp = (isr_v->_main_stask - (main_sizel + sizeof(struct task))) & 0xFFFFFFF8;
-	_os_wb->w_activ = (uint32_t*) isr_v->_main_stask;
-	_os_wb->w_main_stask = (uint32_t*) isr_v->_main_stask;
-	_os_wb->w_use_task_stop = (uint32_t*) (_irq_tmp - ((SERVISE_SIZE + 7) & 0x0000FFF8) - 4);
-	_os_wb->w_nvic_stack = isr_v->_irq_stack;
-	_os_wb->w_nvic_size_use = isr_v->_irqsize;
+    _irq_tmp = (isr_v->_main_stask - (main_sizel + sizeof(struct task))) & 0xFFFFFFF8;
+    _os_wb->w_activ = (uint32_t*) isr_v->_main_stask;
+    _os_wb->w_main_stask = (uint32_t*) isr_v->_main_stask;
+    _os_wb->w_use_task_stop = (uint32_t*) (_irq_tmp - ((SERVISE_SIZE + 7) & 0x0000FFF8) - 4);
+    _os_wb->w_nvic_stack = isr_v->_irq_stack;
+    _os_wb->w_nvic_size_use = isr_v->_irqsize;
     _os_wb->w_malloc0_start = isr_v->_free_ram;
-	_os_wb->w_malloc0_stop = isr_v->_free_ram;
-	*_os_wb->w_malloc0_stop = 0;
-	_os_wb->w_malloc1_start = isr_v->_free_exram;
-	_os_wb->w_malloc1_stop = isr_v->_free_exram;
-	_os_wb->w_system_us = 0;
-	_os_wb->w_delay = 0;
-	_os_wb->w_hold = 0;
-	_os_wb->w_service = 0;
-	_os_wb->w_task_switch = 0;
-	_os_wb->w_tick_1ms = (__SYSHCLK / 1000) - 6;
+    _os_wb->w_malloc0_stop = isr_v->_free_ram;
+    *_os_wb->w_malloc0_stop = 0;
+    _os_wb->w_malloc1_start = isr_v->_free_exram;
+    _os_wb->w_malloc1_stop = isr_v->_free_exram;
+    _os_wb->w_system_us = 0;
+    _os_wb->w_delay = 0;
+    _os_wb->w_hold = 0;
+    _os_wb->w_service = 0;
+    _os_wb->w_task_switch = 0;
+    _os_wb->w_tick_1ms = (__SYSHCLK / 1000) - 6;
 
-	uint32_t* rwserv;
-	rwserv = (uint32_t*) _irq_tmp - 16;
-	for (uint32_t i = 0; i < 26; i++) {*rwserv++ = 0;}; rwserv -=3;
-	uint32_t* rwmain;
-	rwmain = (uint32_t*) isr_v->_main_stask;
-	for (uint32_t i = 0; i < 10; i++) {*rwmain++ = 0;}; rwmain -=3;
-	*rwserv-- = ((__SYSHCLK / 1000) - 6) | (2 << 24);
-	*rwmain-- = ((__SYSHCLK / 1000) - 6) | (1 << 24);
-	*rwserv-- = (SERVISE_SIZE + 7) & 0x0000FFF8;
-	*rwmain-- = main_sizel;
-	*rwserv-- = (uint32_t) &service_txt[0];
-	*rwmain-- = (uint32_t) &main_txt[0];
-	*--rwserv = (uint32_t) _irq_tmp - 64;
-	rwmain -= 2; rwserv -= 2;
-	*rwmain-- = _irq_tmp;
-	*rwmain-- = _irq_tmp;
-	*rwmain = _irq_tmp;
-	*rwserv-- = (uint32_t) isr_v->_main_stask;
-	*rwserv-- = (uint32_t) isr_v->_main_stask;
-	*rwserv-- = 0x1000000;
-	*rwserv-- = (uint32_t)((void*)service);
-	*rwserv = 0x1000000;
+    uint32_t* rwserv;
+    rwserv = (uint32_t*) _irq_tmp - 16;
+    for (uint32_t i = 0; i < 26; i++) {*rwserv++ = 0;}; rwserv -=3;
+    uint32_t* rwmain;
+    rwmain = (uint32_t*) isr_v->_main_stask;
+    for (uint32_t i = 0; i < 10; i++) {*rwmain++ = 0;}; rwmain -=3;
+    *rwserv-- = ((__SYSHCLK / 1000) - 6) | (2 << 24);
+    *rwmain-- = ((__SYSHCLK / 1000) - 6) | (1 << 24);
+    *rwserv-- = (SERVISE_SIZE + 7) & 0x0000FFF8;
+    *rwmain-- = main_sizel;
+    *rwserv-- = (uint32_t) &service_txt[0];
+    *rwmain-- = (uint32_t) &main_txt[0];
+    *--rwserv = (uint32_t) _irq_tmp - 64;
+    rwmain -= 2; rwserv -= 2;
+    *rwmain-- = _irq_tmp;
+    *rwmain-- = _irq_tmp;
+    *rwmain = _irq_tmp;
+    *rwserv-- = (uint32_t) isr_v->_main_stask;
+    *rwserv-- = (uint32_t) isr_v->_main_stask;
+    *rwserv-- = 0x1000000;
+    *rwserv-- = (uint32_t)((void*)service);
+    *rwserv = 0x1000000;
 
     SCB->CPACR = 0x0F << 20; /// FPU settings
     SysTick->LOAD = (__SYSHCLK / 1000) - 6;
@@ -318,7 +315,7 @@ void os_Run(const uint16_t main_size )
     __set_CONTROL(CONTROL_SPSEL_Msk| CONTROL_nPRIV_Msk);
     __ISB();
 
-    /// таймер system_us
+/// таймер system_us
     RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
     TIM6->PSC = 1;
     TIM6->CR1 |= TIM_CR1_ARPE;
@@ -326,7 +323,7 @@ void os_Run(const uint16_t main_size )
     TIM6->DIER = TIM_DIER_UIE;
     TIM6->CR1 |= TIM_CR1_CEN;
     os_EnableIRQ(TIM6_DAC_IRQn, 15);
-	__memory();
+    __memory();
 
     RNG->CR = RNG_CR_RNGEN;
 };
@@ -334,9 +331,9 @@ void os_Run(const uint16_t main_size )
 void  __attribute__ ((weak)) TIM6_DAC_IRQHandler(void)
 {
     TIM6->SR = 0;
-    asm volatile    ("mov   r3, #1		\n\t" //#1 __sleep_tasks
-                    "svc    0x0         \n\t"
-                    ::: "r3", "memory");
+    asm volatile ("mov    r3, #1        \n\t" //#1 __sleep_tasks
+                  "svc    0x0           \n\t"
+                  ::: "r3", "memory");
 };
 
 
@@ -424,11 +421,11 @@ volatile struct  task* r_task;
 void os_Task_del(void)
 {
     os_data.activ->task_mode = delete_task;
-    asm volatile    ("push   {r3}               \n\t"
-                    "mov     r3, 0x04           \n\t" //#4 __to_service
-                    "svc    0x0                 \n\t"
-                    "pop    {r3}                \n\t"
-                    :::"memory");
+    asm volatile ("push   {r3}          \n\t"
+                  "mov    r3, 0x04      \n\t" //#4 __to_service
+                  "svc    0x0           \n\t"
+                  "pop    {r3}          \n\t"
+                  :::"memory");
 };
 
 
@@ -443,11 +440,11 @@ uint32_t ser_del_task(uint32_t next)
     if (next == (uint32_t)task_d) next = (uint32_t)task_d->task_form_head;
     task_l->task_form_head = task_d->task_form_head;
 
-    asm volatile    ("push   {r3}               \n\t"
-                    "mov     r3, 0x08           \n\t" //#8 __delete_task
-                    "svc    0x0                 \n\t"
-                    "pop    {r3}                \n\t"
-                    :::"memory");
+    asm volatile ("push   {r3}          \n\t"
+                  "mov    r3, 0x08      \n\t" //#8 __delete_task
+                  "svc    0x0           \n\t"
+                  "pop    {r3}          \n\t"
+                  :::"memory");
     return next;
 };
 
@@ -483,26 +480,26 @@ void ser_new_task (void)
     nomer_new += (step << 5);
     uint32_t* rwnew;
     uint32_t* rw0;
-	rwnew = (uint32_t*) task_new - 17; rw0 = rwnew + 28;
-	do{*++rwnew = 0;} while (rwnew < rw0); rwnew -= 15;
-	*++rwnew = (uint32_t) os_Task_del; // lr
-	*++rwnew = (uint32_t) tmp_arg->_func; // pc
-	*++rwnew = 0x1000000; // psr
-	*++rwnew = task_new; // task_head
-	*++rwnew = task_new; //task_tail
-	*++rwnew = (uint32_t) task_wt->task_form_head; //task_form_head
-	task_wt->task_form_head = (struct  task*) task_new;
+    rwnew = (uint32_t*) task_new - 17; rw0 = rwnew + 28;
+    do{*++rwnew = 0;} while (rwnew < rw0); rwnew -= 15;
+    *++rwnew = (uint32_t) os_Task_del; // lr
+    *++rwnew = (uint32_t) tmp_arg->_func; // pc
+    *++rwnew = 0x1000000; // psr
+    *++rwnew = task_new; // task_head
+    *++rwnew = task_new; //task_tail
+    *++rwnew = (uint32_t) task_wt->task_form_head; //task_form_head
+    task_wt->task_form_head = (struct  task*) task_new;
     os_data.task_switch = (struct  task*) task_new;
     *++rwnew = task_new - 64; rwnew += 1; // top_stack
     *++rwnew = (uint32_t) tmp_arg->_func_name; //task_names
     *++rwnew = tmp_arg->_size; // stack_area_size
     *++rwnew = tmp_arg->_time_rate | (nomer_new << 24); //activ_time
 
-    asm volatile    ("push   {r3}               \n\t"
-                    "mov     r3, 0x07            \n\t" //#7 __task_new
-                    "svc    0x0                 \n\t"
-                    "pop    {r3}                \n\t"
-                    :::"memory");
+    asm volatile ("push   {r3}          \n\t"
+                  "mov    r3, 0x07      \n\t" //#7 __task_new
+                  "svc    0x0           \n\t"
+                  "pop    {r3}          \n\t"
+                  :::"memory");
 };
 
 
@@ -521,12 +518,12 @@ void os_free (void* d_adres)
     if (os_data.activ->task_nomer != *adres ) return;
     os_data.activ->task_mode = delete_ram;
     os_data.activ->swap_data = (uint32_t) adres;
-    asm volatile    ("push   {r3}               \n\t"
-                    "mov     r3, 0x04           \n\t" //#4 __to_service
-                    "svc    0x0                 \n\t"
-                    "pop    {r3}                \n\t"
-                    :::"memory");
-}
+    asm volatile ("push   {r3}          \n\t"
+                  "mov    r3, 0x04      \n\t" //#4 __to_service
+                  "svc    0x0           \n\t"
+                  "pop    {r3}          \n\t"
+                  :::"memory");
+};
 
 
 void ser_os_free(void)
@@ -563,11 +560,11 @@ void ser_os_free(void)
     }while( name != 0 );
     *ram_have = 0;
     os_data.malloc0_stop = ram_have;
-    asm volatile    ("push   {r3}               \n\t"
-                    "mov     r3, 0x03           \n\t" //#3 __ret_service
-                    "svc    0x0                 \n\t"
-                    "pop    {r3}                \n\t"
-                    :::"memory");
+    asm volatile ("push   {r3}          \n\t"
+                  "mov    r3, 0x03      \n\t" //#3 __ret_service
+                  "svc    0x0           \n\t"
+                  "pop    {r3}          \n\t"
+                  :::"memory");
 };
 
 
@@ -667,11 +664,11 @@ void ser_os_free_all(uint8_t nomer)
     *ram_have = new_ram_size + (os_data.service->task_nomer << 24);
     new_ram = (uint32_t) ram_have + 4;
     os_data.service->swap_data = new_ram;
-    asm volatile    ("push   {r3}               \n\t"
-                    "mov     r3, 0x03           \n\t" //#3 __ret_service
-                    "svc    0x0                 \n\t"
-                    "pop    {r3}                \n\t"
-                    :::"memory");
+    asm volatile ("push   {r3}          \n\t"
+                  "mov    r3, 0x03      \n\t" //#3 __ret_service
+                  "svc    0x0           \n\t"
+                  "pop    {r3}          \n\t"
+                  :::"memory");
  }
 
 
@@ -685,11 +682,11 @@ void  os_EnableIRQ(IRQn_Type IRQn, uint8_t priority)
 {
     register uint8_t    __IRQn          asm  ("r0") = IRQn;
     register uint8_t    __priority      asm  ("r1") = priority;
-    asm volatile    ("push   {r3}               \n\t"
-                    "mov     r3, 0x09			\n\t" //#9 __EnableIRQ
-                    "svc    0x0                 \n\t"
-                    "pop    {r3}                \n\t"
-                    :: "r" (__IRQn), "r" (__priority):"memory");
+    asm volatile ("push   {r3}          \n\t"
+                  "mov    r3, 0x09      \n\t" //#9 __EnableIRQ
+                  "svc    0x0           \n\t"
+                  "pop    {r3}          \n\t"
+                  :: "r" (__IRQn), "r" (__priority):"memory");
 }
 
 
@@ -698,11 +695,11 @@ void  os_EnableIRQ(IRQn_Type IRQn, uint8_t priority)
 void os_DisableIRQ(IRQn_Type IRQn)
 {
     register uint8_t    __IRQn          asm  ("r0") = IRQn;
-    asm volatile    ("push   {r3}               \n\t"
-                    "mov     r3, 0x0A			\n\t" //#10 __DisableIRQ;
-                    "svc    0x0                 \n\t"
-                    "pop    {r3}                \n\t"
-                    :: "r" (__IRQn):"memory");
+    asm volatile ("push   {r3}          \n\t"
+                  "mov    r3, 0x0A      \n\t" //#10 __DisableIRQ;
+                  "svc    0x0           \n\t"
+                  "pop    {r3}          \n\t"
+                  :: "r" (__IRQn):"memory");
 }
 
 
@@ -859,7 +856,7 @@ struct _os_rwr
     uint32_t    r3; // 11
     uint32_t    r12; // 12
     uint32_t    lr; // 13
-    uint32_t       pc; // 14
+    uint32_t    pc; // 14
     uint32_t    psr; // 15
     uint32_t    task_head; //  16
     uint32_t    task_tail; // 17
