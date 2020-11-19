@@ -13,7 +13,7 @@
 
 #include "monitor.h" /// используется функция печати monitor_print(txt)
 /// количество  10-18
-#define OUT_TXT_SIZE_FLOATING   14
+#define OUT_TXT_SIZE_FLOATING   20
 
 static void soft_print(char* txt){ monitor_print(txt);};
 
@@ -95,12 +95,12 @@ static inline void dpr(uint8_t obj ) { print_uint8(obj; };
 static inline void dpr(uint16_t obj) { print_uint16(obj; };
 static inline void dpr(uint32_t obj) { print_uint32(obj; };
 static inline void dpr(uint64_t obj) { print_uint64(obj; };
-static inline void dpr(uint8_t obj) {print_int8(obj); };
-static inline void dpr(int16_t obj) { print_int16(obj); };
-static inline void dpr(int32_t obj) { print_int32(obj); };
-static inline void dpr(int64_t obj) { print_int64(obj); };
-static inline void dpr(float obj) { print_float(obj); };
-static inline void dpr(double obj) { print_double(obj); };
+static inline void dpr(int8_t obj)   { print_int8(obj); };
+static inline void dpr(int16_t obj)  { print_int16(obj); };
+static inline void dpr(int32_t obj)  { print_int32(obj); };
+static inline void dpr(int64_t obj)  { print_int64(obj); };
+static inline void dpr(float obj)    { print_float(obj); };
+static inline void dpr(double obj)   { print_double(obj); };
 
 template <typename T, typename ... Tail> void dpr(const T& obj, const Tail& ... tail) { dpr(obj); soft_print(' '); dpr(tail ...); }
 template<typename ... T> void printo(const T& ... obj) { dpr(obj ...);  }

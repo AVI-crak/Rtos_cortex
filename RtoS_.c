@@ -360,7 +360,10 @@ void service (void)
             case delete_task: next_t = ser_del_task(next_t); break;
             default: break;
         };
-    }else
+    }
+
+#if (__Test_psp == 1)
+    else
     {
         if (monitor_balance() > 70)
         {
@@ -376,7 +379,9 @@ void service (void)
                 next_t = ( uint32_t)os_data.main_task;
             };
         };
-    };
+    }
+#endif
+     ;
     os_pass();
   };
 };

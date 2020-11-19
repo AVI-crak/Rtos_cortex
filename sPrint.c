@@ -76,7 +76,7 @@ char* nex_char (uint32_t value)
     float_text[tmp--] = 'x';
     float_text[tmp] = '0';
     return &float_text[tmp];
-}
+};
 
 char * i32_char (int32_t value)  // 112
 {
@@ -91,24 +91,24 @@ char * i32_char (int32_t value)  // 112
 
 char* ui32_char (uint32_t value)
 {
-    if (value == 0)
-    {
-        float_text[0] = '0';
-        float_text[1] = 0;
-    }else
+    if (value != 0)
     {
         int8_t t_ord;
         t_ord = 20;
         char text_massa[20];
         while (value != 0)
         {
-            text_massa[--t_ord] = value % 10 + '0';
+            text_massa[--t_ord] = (value % 10) + '0';
             value /= 10;
         };
         entire_char ( text_massa, float_text,  t_ord);
+    }else
+    {
+        float_text[0] = '0';
+        float_text[1] = 0;
     };
     return  &float_text[0];
-}
+};
 
 
 char * i64_char (int64_t value)  //180
@@ -125,18 +125,16 @@ char * i64_char (int64_t value)  //180
 
 char * ui64_char (uint64_t value)
 {
-    union double_raw  temp;
-    temp.u64_raw = value;
-    if (temp.u_raw[1] == 0) return  ui32_char (temp.u_raw[0]);
+    if ((value >> 32) == 0) return  ui32_char ((uint32_t) value);
     else
     {
         int8_t t_ord;
         t_ord = 20;
         char text_massa[20];
-        while (temp.u64_raw != 0)
+        while (value != 0)
         {
-            text_massa[--t_ord] = temp.u64_raw % 10 + '0';
-            temp.u64_raw /= 10;
+            text_massa[--t_ord] = (value % 10) + '0';
+            value /= 10;
         };
         entire_char ( text_massa, float_text,  t_ord);
     };
@@ -146,29 +144,35 @@ char * ui64_char (uint64_t value)
 
 void entire_char (char* char_in, char* char_out, int8_t t_ord)   //116
 {
-    int_fast8_t exxx;
-    if (char_out[0] == '-') exxx = 0; else exxx = -1;
-    while (( exxx < (OUT_TXT_SIZE_FLOATING - 1)) && (t_ord != 20))
+    int8_t exxx, ezzz;
+    if (char_out[0] == '-') exxx = 1; else exxx = 0;
+    ezzz = (20 - t_ord) + exxx;
+    if (OUT_TXT_SIZE_FLOATING >= ezzz)
     {
-        char_out[++exxx] = char_in[t_ord++];
-    };
-    t_ord = 20 - t_ord;
-    if (t_ord > 0)
+       while (t_ord != 20)
+       {
+          char_out[exxx++] = char_in[t_ord++];
+       };
+    }else
     {
-        t_ord +=2;
-        if (t_ord < 10)
+        ezzz = OUT_TXT_SIZE_FLOATING - exxx - 3;
+        while (ezzz--)
         {
-            char_out[exxx -1] = 'E';
-            char_out[exxx -0] = t_ord + '0';
-        }else
+          char_out[exxx++] = char_in[t_ord++];
+        };
+        char_out[exxx++] = 'E';
+        t_ord = 20 - t_ord;
+        if (t_ord > 9)
         {
-            t_ord++;
-            char_out[exxx -2] = 'E';
-            char_out[exxx -1] = (t_ord / 10) + '0';
-            char_out[exxx -0] = (t_ord % 10) + '0';
+            char_out[exxx++] = (t_ord / 10) + '0'; t_ord /= 10;
+        };
+        if (t_ord != 0)
+        {
+            char_out[exxx++] = t_ord + '0';
         };
     };
-    char_out[++exxx] = 0;
+    char_out[exxx] = 0;
+
 };
 
 
@@ -232,7 +236,7 @@ floating_char( massa, of10raw, feeze, order10, float_text);
 
     return &float_text[0];
 
-}
+};
 
 
 
@@ -297,25 +301,14 @@ floating_char( massa, of10raw, feeze, order10, float_text);
 
     return &float_text[0];
 
-}
+};
 
 void floating_char(uint32_t massa, uint32_t of10raw, int16_t feeze, int16_t order10, char* out_txt) /// 528 байт
 {
     int_fast8_t sig, t_mas, t_ord, t_ex, verge;
     int_fast16_t  ofree, out_n;
     char text_massa[10];char text_order[5];
-    if (feeze <= 15)
-    {
-        while ( (feeze--) != 0)
-        {
-            of10raw <<= 1;
-            if (of10raw > 999999999 )
-                {
-                    order10 += 1;
-                    of10raw /=10;
-                };
-        };
-    }else if (feeze > 15)
+    if (feeze > 15)
     {
         while ( (feeze++) != 32)
         {
@@ -324,6 +317,17 @@ void floating_char(uint32_t massa, uint32_t of10raw, int16_t feeze, int16_t orde
                 {
                     order10 -= 1;
                     of10raw *=10;
+                };
+        };
+    }else
+    {
+        while ( (feeze--) != 0)
+        {
+            of10raw <<= 1;
+            if (of10raw > 999999999 )
+                {
+                    order10 += 1;
+                    of10raw /=10;
                 };
         };
     };
@@ -390,8 +394,7 @@ void floating_char(uint32_t massa, uint32_t of10raw, int16_t feeze, int16_t orde
         }while (t_ord != 5);
     };
     out_txt[out_n] = 0;
-  //  return &out_txt[0];
-}
+};
 
 /*
 ///const int16_t data_otner[65]
@@ -438,111 +441,4 @@ void floating_char(uint32_t massa, uint32_t of10raw, int16_t feeze, int16_t orde
 
 
 
-/*
-printo("\n 255.552244e+1f = ", 255.5522e+1f);
-printo("\n 1.9523415e-30f = ", 1.9523415e-30f);
-printo("\n -8.654000e+12f = ", -8.6540e+12f);
-printo("\n -2.5500000000f = ", -2.55f);
-printo("\n -1.0000000000f = ", -1.0f);
-printo("\n 4.85400550e-6f = ", 4.8540055e-6f);
-printo("\n 123456789.000f = ", 123456789.0f);
-printo("\n -1.2345679e-7f = ", -1.23456789e-7f);
-printo("\n 35.0000000e+3f = ", 35.0e+3f);
-printo("\n 12.0000000000f = ", 12.0f);
-printo("\n -1.366000e-36f = ", -1.3660e-36f);
 
-printo("\n 2.000000e-308d = ", 2.000000e-308d);
-printo("\n 555664422.550d = ", 555664422.550d);
-printo("\n 1.23456789123d = ", 1.23456789123d);
-printo("\n 3.21654987e-3d = ", 3.21654987e-3d);
-
-
-printo("\n 1.74554255000e-288d = ", 1.74554255000e-288d);
-printo("\n 3.243552454547e+66d = ", 3.243552454547e+66d);
-printo("\n 7.345624524111e+24d = ", 7.345624524111e+24d);
-printo("\n 1.2345678912345678d = ", 1.2345678912345678d);
-
-
-printo("\n 4567891234567891234 =  ", 4567891234567891234);
-printo("\n -4567891234567891234 = ", -4567891234567891234);
-printo("\n -456789123456789123 =  ", -456789123456789123);
-printo("\n -45678912345678912 =   ", -45678912345678912);
-printo("\n -4567891234567891 =    ", -4567891234567891);
-printo("\n -456789123456789 =     ", -456789123456789);
-printo("\n -45678912345678 =      ", -45678912345678);
-printo("\n -4567891234567 =       ", -4567891234567);
-printo("\n -456789123456 =        ", -456789123456);
-printo("\n -45678912345 =         ", -45678912345);
-printo("\n -4567891234 =          ", -4567891234);
-printo("\n -456789123 =           ", -456789123);
-printo("\n -45678912 =            ", -45678912);
-printo("\n -4567891 =             ", -4567891);
-printo("\n -456789 =              ", -456789);
-printo("\n -45678 =               ", -45678);
-printo("\n -4567 =                ", -4567);
-printo("\n -456 =                 ", -456);
-printo("\n -45 =                  ", -45);
-printo("\n -4 =                   ", -4);
-
-
-
-printo("\n 4567891234567891234 =  ", 4567891234567891234);
-printo("\n 456789123456789123 =   ", 456789123456789123);
-printo("\n 45678912345678912 =    ", 45678912345678912);
-printo("\n 4567891234567891 =     ", 4567891234567891);
-printo("\n 456789123456789 =      ", 456789123456789);
-printo("\n 45678912345678 =       ", 45678912345678);
-printo("\n 4567891234567 =        ", 4567891234567);
-printo("\n 456789123456 =         ", 456789123456);
-printo("\n 45678912345 =          ", 45678912345);
-printo("\n 4567891234 =           ", 4567891234);
-printo("\n 456789123 =            ", 456789123);
-printo("\n 45678912 =             ", 45678912);
-printo("\n 4567891 =              ", 4567891);
-printo("\n 456789 =               ", 456789);
-printo("\n 45678 =                ", 4567);
-printo("\n 456 =                  ", 456);
-printo("\n 45 =                   ", 45);
-printo("\n 4 =                    ", 4);
-
-printo("\n uint32_t temp = ", temp);
-
-volatile int64_t i64temp1 = 100;
-printo("\n uint16_t post_xz = ", print_ram.post_xz);
-printo("\n int64_t i64temp1 = ", i64temp1);
-i64temp1 = 0;
-printo("\n int64_t i64temp1 = ", i64temp1);
-i64temp1 = -9205352140778758016;
-printo("\n int64_t i64temp1 = ", i64temp1);
-i64temp1 = -1;
-printo("\n int64_t i64temp1 = ", i64temp1);
-
-
-volatile int32_t i32temp2 = 33;
-printo("\n int32_t i32temp2 = ", i32temp2);
-i32temp2 = 0;
-printo("\n int32_t i32temp2 = ", i32temp2);
-i32temp2 = -221144;
-printo("\n int32_t i32temp2 = ", i32temp2);
-i32temp2 = -1;
-printo("\n int32_t i32temp2 = ", i32temp2);
-
-
-volatile uint8_t ui8temp3 = 33;
-printo("\n uint8_t ui8temp3 33= ", ui8temp3);
-ui8temp3 = 55;
-printo("\n uint8_t ui8temp3 55= ", ui8temp3);
-ui8temp3 = 240;
-printo("\n uint8_t ui8temp3 240 = ", ui8temp3);
-ui8temp3 = 0;
-printo("\n uint8_t ui8temp3 0= ", ui8temp3);
-
-
-
-volatile uint64_t ui64temp4 = 18446744073709551615;
-printo("\n int64_t ui64temp4 18446744073709551615= ", ui64temp4);
-ui64temp4 = 18446744073709551614;
-printo("\n int64_t ui64temp4 18446744073709551614= ", ui64temp4);
-ui64temp4 = 184;
-printo("\n int64_t ui64temp4 = ", ui64temp4);
-*/

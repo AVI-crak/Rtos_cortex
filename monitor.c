@@ -20,14 +20,12 @@
 #include "stm32f7xx.h"
 #include "monitor.h"
 #include "RtoS_.h"
-#include "sPrint.h"
+//#include "sPrint.h"
 
 
- __attribute__((packed, aligned(4))) char     _std_out_buffer[(eb_buf_zize_out & 0xFFFFFFFC)];
- __attribute__((packed, aligned(4))) char     _std_in_buffer[(eb_buf_zize_in & 0xFFFFFFFC)];
+ char    _std_out_buffer[eb_buf_zize_out] __attribute__ ((aligned (4)));
+ char    _std_in_buffer[eb_buf_zize_in] __attribute__ ((aligned (4)));
 
-char     m_mk_buf[64];
-char     m_mk_nol = 0;
 
 
 static struct _stdout
@@ -37,7 +35,7 @@ static struct _stdout
     volatile uint16_t           head;
     volatile uint16_t           mode;
     volatile char               *ptr;
-}_eb_monitor_stdout ={(eb_buf_zize_out & 0xFFFFFFFC),0,0,0,&_std_out_buffer[0]};
+}_eb_monitor_stdout ={eb_buf_zize_out,0,0,0,&_std_out_buffer[0]};
 
 static struct _stdin
 {
@@ -46,9 +44,10 @@ static struct _stdin
     const volatile uint16_t     head;
     volatile uint16_t           mode;
     const volatile char         *ptr;
-}_eb_monitor_stdin ={(eb_buf_zize_in & 0xFFFFFFFC),0,0,0,&_std_in_buffer[0]};
+}_eb_monitor_stdin ={eb_buf_zize_in,0,0,0,&_std_in_buffer[0]};
 
 __attribute__( ( always_inline ) ) static inline void delay( uint32_t volatile time_tmp){do {time_tmp--;} while ( time_tmp );};
+
 /// print text
 /// os_pass() - Command for OS, task forced switching
 /// os_data.system_us - System time, step 1ms
@@ -59,22 +58,21 @@ void monitor_print (char* text)
     while (status == 1)os_pass(); /// busy there
     status = 1;
     char* in_txt;
-    uint32_t temp_h, temp_t, temp_hl;
+    uint32_t temp_h, temp_t;
     int32_t temp_tim;
-    temp_tim = -2000;
-    temp_tim -= os_data.system_us;
-    temp_hl = _eb_monitor_stdout.head;
-    temp_h = temp_hl + 1;
+    temp_tim = os_data.system_us + 2000;
+    temp_tim = 0 - temp_tim;
+    temp_h = _eb_monitor_stdout.head + 1;
+    if (temp_h == eb_buf_zize_out) temp_h = 0;
     temp_t = _eb_monitor_stdout.tail;
     in_txt = text;
-    do
+    while (*in_txt != '\0')
     {
         do{ temp_t = _eb_monitor_stdout.tail; delay(50);}
             while (temp_t != _eb_monitor_stdout.tail);
-        if (temp_h == (eb_buf_zize_out & 0xFFFFFFFC)) temp_h = 0;
+
         if (temp_h == temp_t)
         {
-            _eb_monitor_stdout.head = temp_hl;
             if ((os_data.system_us + temp_tim) > 1)
             {
                 status = 2; return;
@@ -82,15 +80,14 @@ void monitor_print (char* text)
         }else
         {
             _eb_monitor_stdout.ptr[temp_h] = *in_txt++;
-            _eb_monitor_stdout.head = temp_h; temp_hl = temp_h;
-            temp_h++; __DSB();
+            _eb_monitor_stdout.head = temp_h; temp_h++;
+            if (temp_h == eb_buf_zize_out) temp_h = 0;
+
+            __DSB();
         };
-    }while (*in_txt != '\0');
-    _eb_monitor_stdout.head = temp_hl;
+    };
     status = 0;
 };
-
-
 
 uint32_t monitor_balance(void)
 {
@@ -99,7 +96,7 @@ uint32_t monitor_balance(void)
         while (temp_t != _eb_monitor_stdout.tail);
     temp_h = _eb_monitor_stdout.head;
     if (temp_h < temp_t) out = temp_t - temp_h - 1;
-        else out = temp_t + (eb_buf_zize_out & 0xFFFFFFFC) - 1 - temp_h;
+        else out = temp_t + eb_buf_zize_out - 1 - temp_h;
     return out;
 }
 
@@ -109,7 +106,7 @@ char *monitor_scan (void)
     uint32_t tail = _eb_monitor_stdin.tail;
     while (tail != _eb_monitor_stdin.head)
         {
-            tail = (tail + 1) & ((eb_buf_zize_in & 0xFFFFFFFC) -1);
+            tail = (tail + 1) & (eb_buf_zize_in - 1);
             m_ms_buf[temp_x++] = _eb_monitor_stdin.ptr[tail];
             _eb_monitor_stdin.tail = tail;
         };

@@ -28,7 +28,7 @@
 
 
 
-char     m_ms_buf[(eb_buf_zize_in & 0xFFFFFFFC)];
+char     m_ms_buf[eb_buf_zize_in];
 
 /// печать сообщение в EB monitor
 /// \n новая строка, \t табуляция, \f очистка
