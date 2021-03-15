@@ -17,10 +17,9 @@
 
 
 #include <stdint.h>
-#include "stm32f7xx.h"
 #include "monitor.h"
 #include "RtoS_.h"
-//#include "sPrint.h"
+
 
 
  char    _std_out_buffer[eb_buf_zize_out] __attribute__ ((aligned (4)));

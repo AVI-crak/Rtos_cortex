@@ -1,5 +1,5 @@
 /**
- @file+   RtoS_cortex_m7.S
+ @file+   RtoS_.h
  @author  AVI-crak
  @version V-50%
  @date    6-мая-2020
@@ -22,14 +22,12 @@
 
 
 
-
-
 #ifdef _RtoS_
  extern "C" {
 #endif /* _RtoS_ */
 
 /// Добавить свой тип процессора
-#include "stm32f7xx.h"
+#include "stm32f1xx.h"
 
 /// Включение отладочной информации 0/1
 #define __Test_psp 1
@@ -53,6 +51,9 @@ struct _os_basic
     volatile uint32_t* malloc0_stop;        ///#48- Последний адрес malloc0, Last malloc0 address
     const uint32_t* malloc1_start;          ///#52- Первый адрес malloc1, First malloc1 address
     volatile uint32_t* malloc1_stop;        ///#56- Последний адрес malloc1, Last malloc1 address
+#if !defined(__STM32F4xx_H) ||  !defined(__STM32F7xx_H )
+    uint32_t ranlom[3];                     ///#60- Софтовый рандом
+#endif
 }os_data;
 
 
@@ -143,7 +144,7 @@ void os_wake(volatile uint8_t* global_task_nomer);
 void os_freeze(volatile uint8_t* global_task_nomer);
 
 
-/// sDelay_mc (в миллисекундах)
+/// os_Delay_ms (в миллисекундах)
 void os_Delay_ms(uint32_t delay_mc);
 
 
@@ -187,7 +188,7 @@ void os_Task_del(void);
 
 
 
-uint32_t os_Ranlom(uint32_t range);
+uint32_t os_Random(uint32_t range);
 
 
 
@@ -221,6 +222,7 @@ void  __attribute__ ((weak)) EXTI9_5_IRQHandler(void)
 #endif /* _RtoS_ */
 
 #define _RtoS_
+
 
 
 

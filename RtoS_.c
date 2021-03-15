@@ -1,5 +1,5 @@
 /**
- @file    RtoS_cortex_m7.S
+ @file    RtoS_.c
  @author  AVI-crak
  @version V-50%
  @date    6-мая-2020
@@ -20,14 +20,15 @@
 #include "RtoS_.h"
 #include "sPrint.h"
 
-#define  __SYSHCLK     216000000
+//#define  __SYSHCLK     216000000   /// stm32f7
+#define  __SYSHCLK     74000000   /// stm32f1
 #define  SERVISE_SIZE  500
 #pragma GCC push_options
 #pragma GCC optimize ("Os")
 
 
 /// _estack - upper bound of memory
-///	Add to startup_XXX.s
+/// Add to startup_XXX.s
 /// .equ   _irqsize, 600 // Interrupt Stack Size
 /// .equ   _main_stask,         ( _estack -   ((_irqsize + 240) & 0xFFFFFFF8))
 /// Replace below _estack on the _main_stask
@@ -159,7 +160,7 @@ void *os_malloc(int32_t d_size)
 return out;
 }
 
-/// sDelay_mc (ms)
+/// os_Delay_ms (ms)
 void os_Delay_ms(uint32_t delay_mc)
 {
     os_data.activ->swap_data = delay_mc;
@@ -300,10 +301,12 @@ void os_Run(const uint16_t main_size )
     *rwserv-- = (uint32_t)((void*)service);
     *rwserv = 0x1000000;
 
+#if defined(__STM32F4xx_H) ||  defined(__STM32F7xx_H )
     SCB->CPACR = 0x0F << 20; /// FPU settings
+#endif
     SysTick->LOAD = (__SYSHCLK / 1000) - 6;
     SysTick->VAL = (__SYSHCLK / 1000) - 6;
-    SysTick->CTRL =	SysTick_CTRL_CLKSOURCE_Msk|
+    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk|
                     SysTick_CTRL_TICKINT_Msk|
                     SysTick_CTRL_ENABLE_Msk;
     os_EnableIRQ(SysTick_IRQn, 15);
@@ -322,13 +325,24 @@ void os_Run(const uint16_t main_size )
     TIM6->ARR = (__SYSHCLK / 4) / 1000; // APB1= /4
     TIM6->DIER = TIM_DIER_UIE;
     TIM6->CR1 |= TIM_CR1_CEN;
-    os_EnableIRQ(TIM6_DAC_IRQn, 15);
+///    os_EnableIRQ(TIM6_DAC_IRQn, 15); // stm32f7
+    os_EnableIRQ(TIM6_IRQn, 15); // stm32f1
     __memory();
 
-    RNG->CR = RNG_CR_RNGEN;
+#if defined(__STM32F4xx_H) ||  defined(__STM32F7xx_H )
+    RNG->CR = RNG_CR_RNGEN; // stm32f7
+#endif
+
+#if defined(__STM32F1xx_H)
+ os_data.ranlom[0] = *(os_data.malloc0_start + 4);
+ os_data.ranlom[1] = *(os_data.malloc0_start + 8);
+ os_data.ranlom[2] = *(os_data.malloc0_start + 12);
+#endif
+
 };
 
-void  __attribute__ ((weak)) TIM6_DAC_IRQHandler(void)
+///void  __attribute__ ((weak)) TIM6_DAC_IRQHandler(void) // stm32f7
+void  __attribute__ ((weak)) TIM6_IRQHandler(void) // stm32f1
 {
     TIM6->SR = 0;
     asm volatile ("mov    r3, #1        \n\t" //#1 __sleep_tasks
@@ -398,7 +412,7 @@ void ser_val_txt (char* txt, uint32_t date)
 uint32_t ser_status_log (uint32_t next_task )
 {
 uint32_t    temp, tmp;
-volatile struct  task* r_task;
+struct  task* r_task;
 
     r_task = ( struct task*)next_task;
     tmp = 0; do {ser_buf_log[tmp++] = ' ';} while (tmp < 70); tmp = 0; __ISB();
@@ -536,77 +550,38 @@ void ser_os_free(void)
     uint8_t* del_ram;
     del_ram = (uint8_t*)os_data.service->swap_data;
     *del_ram = 0;
-    int32_t offset = 0;
-    int32_t offsetl = 0;
-    uint32_t* ram_have;
-    ram_have = (uint32_t*) os_data.malloc0_start;
-    int32_t end_ram = 0;
-    uint32_t name;
-    do
-    {
-        do
-        {
-            ram_have += offset;
-            name = *ram_have;
-            offset = name & 0x00FFFFFF;
-            name >>= 24;
-        }while (name != 0);
-        do
-        {
-            end_ram = *(ram_have + offset);
-            offsetl = end_ram & 0x00FFFFFF;
-            name = end_ram >> 24;
-            if ( name == 0 )
-                {
-                    offset += offsetl;
-                    *ram_have = offset;
-                }else break;
-        }while (end_ram != 0);
-    }while( name != 0 );
-    *ram_have = 0;
-    os_data.malloc0_stop = ram_have;
     asm volatile ("push   {r3}          \n\t"
                   "mov    r3, 0x03      \n\t" //#3 __ret_service
                   "svc    0x0           \n\t"
                   "pop    {r3}          \n\t"
                   :::"memory");
+
 };
 
 
 void ser_os_free_all(uint8_t nomer)
 {
-    int32_t offset = 0;
-    int32_t offsetl = 0;
+    uint32_t names;
     uint32_t* ram_have;
     ram_have = (uint32_t*) os_data.malloc0_start;
-    int32_t end_ram = 0;
-    uint32_t name;
+    uint32_t name = 0XFF;
+    int32_t offset = 0;
     do
     {
-        do
+        if (!((name == nomer) | (name == 0)))
         {
             ram_have += offset;
-            name = *ram_have;
-            offset = name & 0x00FFFFFF;
-            name >>= 24;
-            if (name == nomer)
-            {
-                *(ram_have + offset) = offset;
-                name = 0;
-            };
-        }while (name != 0);
-        do
+            names = *ram_have;
+            offset = names & 0x00FFFFFF;
+            name = names >> 24;
+        }else
         {
-            end_ram = *(ram_have + offset);
-            offsetl = end_ram & 0x00FFFFFF;
-            name = end_ram >> 24;
-            if (( name == 0 )||( name == nomer ))
-                {
-                    offset += offsetl;
-                    *(ram_have + offset) = offset;
-                }else break;
-        }while (end_ram != 0);
-    }while( end_ram != 0 );
+            *ram_have = offset;
+            names = *(ram_have + offset);
+            offset += names & 0x00FFFFFF;
+            name = names >> 24;
+        };
+    }while(names != 0);
     *ram_have = 0;
     os_data.malloc0_stop = ram_have;
 };
@@ -614,67 +589,51 @@ void ser_os_free_all(uint8_t nomer)
 
  void ser_new_ram (void)
  {
-    int32_t new_ram_size, new_head;
+    int32_t new_ram_size;
     new_ram_size = os_data.service->swap_data;
-    new_head = new_ram_size + 1;
     int32_t offset = 0;
-    int32_t offsetl;
     uint32_t* ram_have;
-    uint32_t* ram_head;
     ram_have = (uint32_t*) os_data.malloc0_start;
-    uint32_t new_ram;
-    uint32_t name;
+    uint32_t name = 0XFF;
+    uint32_t names;
+
     do
     {
-        do
+        if (name != 0)
         {
             ram_have += offset;
-            name = *ram_have;
-            offset = name & 0x00FFFFFF;
-            name >>= 24;
-        }while (name != 0);
-        do
+            names = *ram_have;
+            offset = names & 0x00FFFFFF;
+            name = names >> 24;
+            if (names == 0) break;
+        }else
         {
-            name = *(ram_have + offset);
-            offsetl = name & 0x00FFFFFF;
-            if (( name >> 24) == 0 )
-                {
-                    offset += offsetl;
-                    *ram_have = offset;
-                }else offsetl = 0;
-        }while (offsetl != 0);
-        if (offset >= new_head)
-            {
-                *(ram_have + new_ram_size) = offset - new_ram_size;
-                break;
-            }else if (offset == new_ram_size)
-            {
-                break;
-            }else if(offset == 0)
-            {
-                ram_head = ram_have; ram_head += new_ram_size;
-                if (os_data.use_task_stop < ram_head)
-                    {
-                        os_data.service->swap_data = 0;
-                        __BKPT();
-                        return;
-                    }else
-                    {
-                        *(ram_have + new_ram_size) = 0;
-                        os_data.malloc0_stop = ram_head;
-                        break;
-                    };
-            };
-    }while(1);
+            names = *(ram_have + offset);
+            offset += names & 0x00FFFFFF;
+            name = names >> 24;
+            if (names == 0) break;
+        };
+    }while((name != 0)|(offset < new_ram_size));
+    if (os_data.use_task_stop < (ram_have + new_ram_size) )
+      {
+          os_data.service->task_mode--;
+          return;
+      };
+    if (os_data.malloc0_stop < (ram_have + new_ram_size) )
+      {
+          os_data.malloc0_stop = ram_have + new_ram_size;
+      };
     *ram_have = new_ram_size + (os_data.service->task_nomer << 24);
-    new_ram = (uint32_t) ram_have + 4;
-    os_data.service->swap_data = new_ram;
+    if (names == 0) { *(ram_have + new_ram_size) = 0;}
+    else if (offset > new_ram_size) { *(ram_have + new_ram_size) = offset - new_ram_size;};
+    os_data.service->swap_data = (uint32_t) ram_have + 4;
     asm volatile ("push   {r3}          \n\t"
                   "mov    r3, 0x03      \n\t" //#3 __ret_service
                   "svc    0x0           \n\t"
                   "pop    {r3}          \n\t"
-                  :::"memory");
- }
+                   :::"memory");
+     return;
+ };
 
 
 
@@ -692,7 +651,7 @@ void  os_EnableIRQ(IRQn_Type IRQn, uint8_t priority)
                   "svc    0x0           \n\t"
                   "pop    {r3}          \n\t"
                   :: "r" (__IRQn), "r" (__priority):"memory");
-}
+};
 
 
 
@@ -705,14 +664,30 @@ void os_DisableIRQ(IRQn_Type IRQn)
                   "svc    0x0           \n\t"
                   "pop    {r3}          \n\t"
                   :: "r" (__IRQn):"memory");
-}
+};
 
-
-
-uint32_t os_Ranlom( uint32_t range)
+uint32_t soft_ranndom (void)
 {
-    while(!RNG->SR) delay(10);
-    uint32_t tmp_x =  RNG->DR;
+    asm volatile ("push   {r3}          \n\t"
+                  "mov    r3, 0x0C      \n\t" //#C __ranndom
+                  "svc    0x0           \n\t"
+                  "pop    {r3}          \n\t"
+                  :::"memory");
+    volatile uint32_t out = os_data.activ->swap_data;
+    return out;
+};
+
+
+
+uint32_t os_Random( uint32_t range)
+{
+    uint32_t tmp_x;
+#if defined(__STM32F4xx_H) ||  defined(__STM32F7xx_H )
+    while(!RNG->SR) delay(10);  // stm32f4-stm32f7
+    tmp_x =  RNG->DR;  // stm32f4-stm32f7
+#else
+    tmp_x = soft_ranndom();
+#endif
     uint64_t tmp_m = (uint64_t) tmp_x * range;
     uint32_t tmp_l = (uint32_t) tmp_m;
     uint32_t tmp_t;
@@ -726,8 +701,12 @@ uint32_t os_Ranlom( uint32_t range)
             };
         while (tmp_l < tmp_t)
         {
-            while(!RNG->SR)delay(10);
-            tmp_x = RNG->DR;
+#if defined(__STM32F4xx_H) ||  defined(__STM32F7xx_H )
+            while(!RNG->SR)delay(10); // stm32f4-stm32f7
+            tmp_x = RNG->DR;          // stm32f4-stm32f7
+#else
+            tmp_x = soft_ranndom();
+#endif
             tmp_m = (uint64_t) tmp_x * range;
             tmp_l = (uint32_t) tmp_m;
         };
@@ -737,91 +716,13 @@ uint32_t os_Ranlom( uint32_t range)
 };
 
 
-
 #pragma GCC pop_options
 
 
 
 
 
- /*
- /// 6472
-    union
-    {
-       uint32_t all32[8];
-       uint8_t all8[32];
-    }n;
-    step = 0;
-    while (step < 8)  n.all32[step++] = (uint32_t) 0-1;
-    n.all32[0] ^= 1;
-    do{
-        n.all8[task_r->task_nomer >> 5] = __BIC(n.all8[task_r->task_nomer >> 3], (uint32_t) 1 << (task_r->task_nomer & 7));
-        task_r = task_r->task_form_head;
-    }while ((uint32_t)task_r != 0);
-    uint8_t nomer_new; step = 0;
-    while(__CLZ(__RBIT(n.all32[step])) == 32) step++;
-    nomer_new = __CLZ(__RBIT(n.all32[step])) + (step << 5);
 
-
-
-
-
-   // 6464
-    uint32_t  task_new, step, n_l, n_h;
-    task_r = (struct  task*)os_data.main_task;
-    uint32_t b_nomer[8];
-    step = 0;
-    while (step < 8)  b_nomer[step++] = (uint32_t) 0-1;
-    b_nomer[0] ^= 1;
-    do{
-        n_h = task_r->task_nomer; n_l = n_h & 31; n_h >> 5;
-        b_nomer[n_h] = __BIC(b_nomer[n_h], (uint32_t) 1 << n_l);
-        task_r = task_r->task_form_head;
-    }while ((uint32_t)task_r != 0);
-    uint8_t nomer_new; step = 0;
-    while(__CLZ(__RBIT(b_nomer[step])) == 32) step++;
-    nomer_new = __CLZ(__RBIT(b_nomer[step])) + (step << 5);
-    */
-
-
-
-
-	/*
-	uint32_t* tmp = (uint32_t*)_irq_tmp - 16;
-	for (uint32_t i = 0; i < 26; i++) tmp[i] = 0;
-
-	os_data.activ->task_head = (struct  task*) isr_v->_main_stask;
-	os_data.activ->task_tail = (struct  task*) isr_v->_main_stask;
-	os_data.activ->top_stack = (uint32_t) _irq_tmp - 64; // -m
-	os_data.activ->task_names = (char*)service_txt;
-	os_data.activ->stack_area_size = (SERVISE_SIZE + 7) & 0xFFFFFFF8;
-	os_data.activ->task_nomer = 2;
-	os_data.activ->activ_time = (__SYSHCLK / 1000) - 6;
-
-
-
-	_os_wb->w_activ = (uint32_t*)isr_v->_main_stask;
-	os_data.activ->task_head = (struct  task*) _irq_tmp;
-	os_data.activ->task_tail = (struct  task*) _irq_tmp;
-	os_data.activ->task_form_head = (struct  task*) _irq_tmp;
-	os_data.activ->task_names = (char*) main_txt;
-	os_data.activ->stack_area_size = main_sizel;
-	os_data.activ->stack_area_used = 0;
-	os_data.activ->activ_time = (__SYSHCLK / 1000) - 6;
-	os_data.activ->task_nomer = 1;
-	os_data.activ->link_data = 0;
-	os_data.activ->link_head = 0;
-	os_data.activ->link_tail = 0;
-	os_data.activ->link_task_nomer = 0;
-	os_data.activ->task_mode = 0;
-
-    volatile struct _os_new_stack* _os_new_r;
-    _os_new_r = (struct _os_new_stack*)_irq_tmp - 1;
-    _os_new_r->lr = 0x1000000;
-    _os_new_r->pc = (void*)service ;
-    _os_new_r->psr = 0x1000000;
-
-    */
 
 /*
 struct _os_new_stack
@@ -865,7 +766,7 @@ struct _os_rwr
     uint32_t    psr; // 15
     uint32_t    task_head; //  16
     uint32_t    task_tail; // 17
-    uint32_t    task_form_head;	// 18
+    uint32_t    task_form_head; // 18
     uint32_t    top_stack;  // 19
     uint32_t    swap_data;  // 20
     uint32_t    task_names; // 21
