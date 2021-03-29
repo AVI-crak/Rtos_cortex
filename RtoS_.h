@@ -27,11 +27,10 @@
 #endif /* _RtoS_ */
 
 /// Добавить свой тип процессора
-#include "stm32f1xx.h"
+#include "stm32f7xx.h"
 
 /// Включение отладочной информации 0/1
 #define __Test_psp 1
-
 
 struct _os_basic
 {
@@ -54,7 +53,11 @@ struct _os_basic
 #if !defined(__STM32F4xx_H) ||  !defined(__STM32F7xx_H )
     uint32_t ranlom[3];                     ///#60- Софтовый рандом
 #endif
-}os_data;
+};
+
+
+extern struct _os_basic os_data;
+
 
 
 

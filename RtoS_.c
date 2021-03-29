@@ -20,8 +20,8 @@
 #include "RtoS_.h"
 #include "sPrint.h"
 
-//#define  __SYSHCLK     216000000   /// stm32f7
-#define  __SYSHCLK     74000000   /// stm32f1
+#define  __SYSHCLK     216000000   /// stm32f7
+//#define  __SYSHCLK     74000000   /// stm32f1
 #define  SERVISE_SIZE  500
 #pragma GCC push_options
 #pragma GCC optimize ("Os")
@@ -32,6 +32,11 @@
 /// .equ   _irqsize, 600 // Interrupt Stack Size
 /// .equ   _main_stask,         ( _estack -   ((_irqsize + 240) & 0xFFFFFFF8))
 /// Replace below _estack on the _main_stask
+
+struct _os_basic os_data;
+
+
+
 
 const char main_txt[] = "Main";
 const char service_txt[] = "Service";
@@ -325,24 +330,35 @@ void os_Run(const uint16_t main_size )
     TIM6->ARR = (__SYSHCLK / 4) / 1000; // APB1= /4
     TIM6->DIER = TIM_DIER_UIE;
     TIM6->CR1 |= TIM_CR1_CEN;
-///    os_EnableIRQ(TIM6_DAC_IRQn, 15); // stm32f7
+#if defined(__STM32F7xx_H )
+    os_EnableIRQ(TIM6_DAC_IRQn, 15); // stm32f7
+#elif defined(__STM32F1XX_H)
     os_EnableIRQ(TIM6_IRQn, 15); // stm32f1
+#endif
     __memory();
 
 #if defined(__STM32F4xx_H) ||  defined(__STM32F7xx_H )
     RNG->CR = RNG_CR_RNGEN; // stm32f7
 #endif
 
-#if defined(__STM32F1xx_H)
+#if defined(__STM32F1XX_H)
  os_data.ranlom[0] = *(os_data.malloc0_start + 4);
  os_data.ranlom[1] = *(os_data.malloc0_start + 8);
  os_data.ranlom[2] = *(os_data.malloc0_start + 12);
+ if ((os_data.ranlom[0]==0)|(os_data.ranlom[1]==0)|(os_data.ranlom[2]==0)){
+ os_data.ranlom[0] = 5468651;
+ os_data.ranlom[0] = 7454164;
+ os_data.ranlom[0] = 1587975;};
+
 #endif
 
 };
 
-///void  __attribute__ ((weak)) TIM6_DAC_IRQHandler(void) // stm32f7
+#if defined(__STM32F7xx_H )
+void  __attribute__ ((weak)) TIM6_DAC_IRQHandler(void) // stm32f7
+#elif defined(__STM32F1XX_H)
 void  __attribute__ ((weak)) TIM6_IRQHandler(void) // stm32f1
+#endif
 {
     TIM6->SR = 0;
     asm volatile ("mov    r3, #1        \n\t" //#1 __sleep_tasks
@@ -717,65 +733,4 @@ uint32_t os_Random( uint32_t range)
 
 
 #pragma GCC pop_options
-
-
-
-
-
-
-
-/*
-struct _os_new_stack
-{
-    uint32_t    r4;
-    uint32_t    r5;
-    uint32_t    r6;
-    uint32_t    r7;
-    uint32_t    r8;
-    uint32_t    r9;
-    uint32_t    r10;
-    uint32_t    r11;
-    uint32_t    r0;
-    uint32_t    r1;
-    uint32_t    r2;
-    uint32_t    r3;
-    uint32_t    r12;
-    uint32_t    lr;
-    void*       pc;
-    uint32_t    psr;
-
-};
-
-struct _os_rwr
-{
-    uint32_t    r4; // 0
-    uint32_t    r5; // 1
-    uint32_t    r6; // 2
-    uint32_t    r7; // 3
-    uint32_t    r8; // 4
-    uint32_t    r9; // 5
-    uint32_t    r10; // 6
-    uint32_t    r11; // 7
-    uint32_t    r0; // 8
-    uint32_t    r1; // 9
-    uint32_t    r2; // 10
-    uint32_t    r3; // 11
-    uint32_t    r12; // 12
-    uint32_t    lr; // 13
-    uint32_t    pc; // 14
-    uint32_t    psr; // 15
-    uint32_t    task_head; //  16
-    uint32_t    task_tail; // 17
-    uint32_t    task_form_head; // 18
-    uint32_t    top_stack;  // 19
-    uint32_t    swap_data;  // 20
-    uint32_t    task_names; // 21
-    uint32_t    stack_area_size__used;  // 22
-    uint32_t    activ_time_task_nomer;  // 23
-    uint32_t    link_data;  // 24
-    uint32_t    link___mode;  // 25
-    //26
-
-};
-*/
 

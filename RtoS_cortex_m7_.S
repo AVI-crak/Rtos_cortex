@@ -93,6 +93,7 @@ __switch:    // переключатель задач
             bxeq       lr
 
 
+
 __switch_rxx:    //switch: r0 save, r3<17 r0 move to inactive
  .ifdef  __Test_psp
             ldrh       r1, [r0, #26]            // stack area used
