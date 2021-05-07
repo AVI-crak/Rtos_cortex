@@ -95,7 +95,7 @@ __switch:    // переключатель задач
 
 
 __switch_rxx:    //switch: r0 save, r3<17 r0 move to inactive
- .ifdef  __Test_psp
+ .if  (__Test_psp)
             ldrh       r1, [r0, #26]            // stack area used
             mrs        r2, psp
             sub        r2, r0, r2

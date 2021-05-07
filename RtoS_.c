@@ -27,6 +27,7 @@
 #pragma GCC optimize ("Os")
 
 
+
 /// _estack - upper bound of memory
 /// Add to startup_XXX.s
 /// .equ   _irqsize, 600 // Interrupt Stack Size
@@ -102,13 +103,13 @@ int32_t os_tim_ms(int32_t* timer_name, int32_t timer_ms)
     int32_t tim2 = tim + *timer_name;
     if ( tim2 > timer_ms) /// таймер убежал далеко вперёд
     {
-        *timer_name = 1 - (tim + timer_ms - (tim2 % timer_ms));
+        *timer_name = 0 - (tim + timer_ms - (tim2 % timer_ms));
     }else if (tim2 > 0)   /// значение таймера достаточно для выполнения условия
     {
-        *timer_name = 1 - (timer_ms + tim - tim2);
+        *timer_name = 0 - (timer_ms + tim - tim2);
     }else if ((timer_ms + tim2) < 0)  /// timer_name установлен на время превышающее timer_mc
     {
-        *timer_name = 1 - (tim + timer_ms);
+        *timer_name = 0 - (tim + timer_ms);
     }else tim2 = 0;
     return tim2;
 };
@@ -338,6 +339,7 @@ void os_Run(const uint16_t main_size )
     __memory();
 
 #if defined(__STM32F4xx_H) ||  defined(__STM32F7xx_H )
+    RCC->AHB2ENR |= RCC_AHB2ENR_RNGEN;
     RNG->CR = RNG_CR_RNGEN; // stm32f7
 #endif
 
@@ -704,30 +706,7 @@ uint32_t os_Random( uint32_t range)
 #else
     tmp_x = soft_ranndom();
 #endif
-    uint64_t tmp_m = (uint64_t) tmp_x * range;
-    uint32_t tmp_l = (uint32_t) tmp_m;
-    uint32_t tmp_t;
-    if (tmp_l < range)
-    {
-        tmp_t = -range;
-        if (tmp_t >= range)
-            {
-                tmp_t -= range;
-                if (tmp_t >= range) tmp_t %= range;
-            };
-        while (tmp_l < tmp_t)
-        {
-#if defined(__STM32F4xx_H) ||  defined(__STM32F7xx_H )
-            while(!RNG->SR)delay(10); // stm32f4-stm32f7
-            tmp_x = RNG->DR;          // stm32f4-stm32f7
-#else
-            tmp_x = soft_ranndom();
-#endif
-            tmp_m = (uint64_t) tmp_x * range;
-            tmp_l = (uint32_t) tmp_m;
-        };
-    };
-    tmp_x = tmp_m >> 32;
+    tmp_x = tmp_x % range;
     return tmp_x;
 };
 

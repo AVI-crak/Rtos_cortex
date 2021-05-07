@@ -40,6 +40,7 @@ void qspi_install (void)
     gpio_one_pin(zap_gpio.F.pin06.v_af09_quadspi_bk1_io3.speed4.pull_up.lock_on);
 
     RCC->AHB3ENR |= RCC_AHB3ENR_QSPIEN;
+    RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
     RCC->AHB3RSTR = RCC_AHB3RSTR_QSPIRST;
     delay(50); // 50 HCLK
     RCC->AHB3RSTR &= ~RCC_AHB3RSTR_QSPIRST;
@@ -122,14 +123,13 @@ __DSB();
 /// The size of the data block is equal to the size of the sector, the address of the sector is direct
 void qspi_sektor_wire (uint8_t* data, uint32_t adress)
 {
-    uint32_t  adres, temp;
+    uint32_t  adres, temp, temp2;
     adres = adress & ((~(QSPI_SEKTOR_SIZE - 1)) & 0x0FFFFFFF);
-    qspi_reset();
+    qspi_reset(); delay(100);
 /// Erasing a single memory sector
     QUADSPI->CCR = _VAL2FLD(QUADSPI_CCR_INSTRUCTION, 0x06)      /// Write Enable (06h)
                     |_VAL2FLD(QUADSPI_CCR_IMODE, 1);            // Instruction on a single line
-    while(!(QUADSPI->SR & QUADSPI_SR_TCF));                     // Transfer complete flag
-    temp = QUADSPI->DR;temp = QUADSPI->DR;temp = QUADSPI->DR;
+    while(!(QUADSPI->SR & QUADSPI_SR_TCF))temp2 = QUADSPI->DR;                     // Transfer complete flag
     while(QUADSPI->SR & QUADSPI_SR_BUSY);
     QUADSPI->FCR = QUADSPI_FCR_CSMF|QUADSPI_FCR_CTCF|QUADSPI_FCR_CTEF|QUADSPI_FCR_CTOF; // reset flags
     delay(10);
@@ -144,28 +144,29 @@ void qspi_sektor_wire (uint8_t* data, uint32_t adress)
     while(!(QUADSPI->SR & QUADSPI_SR_TCF));                     // Transfer complete flag
     while(QUADSPI->SR & QUADSPI_SR_BUSY);
     QUADSPI->FCR = QUADSPI_FCR_CSMF|QUADSPI_FCR_CTCF|QUADSPI_FCR_CTEF|QUADSPI_FCR_CTOF; // reset flags
-    delay(10);
+    delay(100);
 
     QUADSPI->CCR =  _VAL2FLD(QUADSPI_CCR_FMODE, 2)              // Automatic polling mode
                         |_VAL2FLD(QUADSPI_CCR_DMODE, 1)         // Data on four lines
                         |_VAL2FLD(QUADSPI_CCR_IMODE, 1)         // Instruction on a single line
                         |_VAL2FLD(QUADSPI_CCR_INSTRUCTION, 0x05);   /// Read Status Register-1
     while(!(QUADSPI->SR & QUADSPI_SR_SMF));                     // Status Match Flag
+    while(QUADSPI->SR & QUADSPI_SR_FTF)temp2 = QUADSPI->DR;
     QUADSPI->FCR = QUADSPI_FCR_CSMF|QUADSPI_FCR_CTCF|QUADSPI_FCR_CTEF|QUADSPI_FCR_CTOF; // reset flags
-    delay(10);
+    delay(100);
 
 /// Memory block record
     temp = 0;
  do{
     QUADSPI->CCR = _VAL2FLD(QUADSPI_CCR_INSTRUCTION, 0x06)      /// Write Enable (06h)
                         |_VAL2FLD(QUADSPI_CCR_IMODE, 1);        // Instruction on a single line
-    while(!(QUADSPI->SR & QUADSPI_SR_TCF));                     // Transfer complete flag
+    while(!(QUADSPI->SR & QUADSPI_SR_TCF))temp2 = QUADSPI->DR;                     // Transfer complete flag
     while(QUADSPI->SR & QUADSPI_SR_BUSY);
     QUADSPI->FCR = QUADSPI_FCR_CSMF|QUADSPI_FCR_CTCF|QUADSPI_FCR_CTEF|QUADSPI_FCR_CTOF; // reset flags
     delay(100);
 
     QUADSPI->AR = adres + temp;
-    QUADSPI->DLR = QSPI_BLOCK_SIZE;
+    QUADSPI->DLR = QSPI_BLOCK_SIZE- 1;
     QUADSPI->CR = _VAL2FLD(QUADSPI_CR_PRESCALER, 3)             // Clock prescaler AHB/4 54Mgz
                  |_VAL2FLD(QUADSPI_CR_APMS, 1)                  // Automatic poll mode stop
                  |_VAL2FLD(QUADSPI_CR_FTHRES, 15)               // FIFO threshold level 16Bute
@@ -184,13 +185,13 @@ __DSB();
     DMA2_Stream7->FCR = 0;
     DMA2_Stream7->NDTR = (QSPI_BLOCK_SIZE / 4);                         // Block size 256B/4
     DMA2_Stream7->M0AR = ((uint32_t) data) + temp;
-    DMA2_Stream7->PAR = (uint32_t) &QUADSPI->DR;
+    DMA2_Stream7->PAR = (uint32_t) &(QUADSPI->DR);
     DMA2_Stream7->FCR = DMA_SxFCR_DMDIS | sDMA_SxFCR_FTH.full_FIFO_4_4;
 __DSB();
     DMA2_Stream7->CR = sdma_line.dma2.stream_7.ch3_QUADSPI              /// channe - tmigger
                         |sDMA_SxCR_DIR.memory_to_peripheral             /// data transfer direction
                         |sDMA_SxCR_MBURST.incremental_burst_of_4_beats  /// memory burst transfer configuration
-                        |sDMA_SxCR_PBURST.incremental_burst_of_4_beats  /// peripheral burst transfer configuration
+                        |sDMA_SxCR_PBURST.incremental_burst_of_4_beats              /// peripheral burst transfer configuration
                         |swDMA_SxCR_PL(3)                               /// priority level 0-Low, 1-Medium, 2-High, 3-Very high
                         |sDMA_SxCR_MSIZE.t32_bit                        /// memory data size
                         |DMA_SxCR_MINC                                  /// memory increment mode
@@ -199,11 +200,13 @@ __DSB();
 
 __DSB();
     while(QUADSPI->SR & QUADSPI_SR_BUSY)delay(50);
-    while(!(QUADSPI->SR & QUADSPI_SR_TCF));
+    while(!(QUADSPI->SR & QUADSPI_SR_TCF))delay(50);
+
+
     QUADSPI->FCR = QUADSPI_FCR_CSMF|QUADSPI_FCR_CTCF|QUADSPI_FCR_CTEF|QUADSPI_FCR_CTOF; // reset flags
 
 
-delay(10);
+delay(30);
     QUADSPI->CR = _VAL2FLD(QUADSPI_CR_PRESCALER, 3)             // Clock prescaler AHB/4 54Mgz
                  |_VAL2FLD(QUADSPI_CR_APMS, 1)                  // Automatic poll mode stop
                  |_VAL2FLD(QUADSPI_CR_TCEN, 1)                  // Timeout counter enable memory-mapped mode
@@ -240,6 +243,7 @@ __DSB();
                     |_VAL2FLD(QUADSPI_CCR_IMODE, 1)             // Instruction on a single line
                     |_VAL2FLD(QUADSPI_CCR_INSTRUCTION, 0xEE);   /// DDR Quad I/O Read(4-byte Address 0xEE)
 __DSB();
+delay(100);
 };
 
 
@@ -259,7 +263,8 @@ void qspi_data_wire ( uint8_t* data, uint32_t data_size, uint32_t flash_adres)
     do
     {
         ptr32 = (uint32_t*) ((flash_adres + adres_in) & (~(QSPI_SEKTOR_SIZE - 1))); adres_out = 0;
-        while (adres_out < (QSPI_SEKTOR_SIZE / 4)) {qspi_dat_buf.dat32[adres_out] = ptr32[adres_out]; adres_out++;};
+        while (adres_out < (QSPI_SEKTOR_SIZE / 4))
+            {qspi_dat_buf.dat32[adres_out] = ptr32[adres_out]; delay(100); adres_out++;};
         adres_out = (flash_adres + adres_in) & (QSPI_SEKTOR_SIZE - 1);
         while ((adres_out < QSPI_SEKTOR_SIZE)&&(adres_in < data_size))
         {

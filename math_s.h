@@ -437,7 +437,7 @@ float sin_f_fast(float value_rad)
     if (value_rad < 0) value_rad = value_rad + Pi2;
     if (value_rad >= (PI+ Pi/2.0f)) value_rad -= Pi2;
         else if (value_rad > Pi/2.0f) value_rad = PI - value_rad;
-    if  (abs_f(value_rad) < 1.0e-35 ) return value_rad;
+    if  (abs_f(value_rad) < 1.0e-34f ) return value_rad;
 
     rrg = abs_f(value_rad * 162.338043212890625f);//((1/(PI/2)) * 255.0f); /// 255.0f = the size of the array of constants of sin (0:pi/2)
     nxi = (int32_t)rrg; rrg -= (float)nxi ;

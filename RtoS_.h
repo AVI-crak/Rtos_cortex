@@ -30,7 +30,7 @@
 #include "stm32f7xx.h"
 
 /// Включение отладочной информации 0/1
-#define __Test_psp 1
+#define __Test_psp 0
 
 struct _os_basic
 {
@@ -177,7 +177,7 @@ uint32_t os_Task_new (void (*taskS_func),uint16_t task_size,uint8_t task_time_ra
 
 
 /// Уступить время - только внутри работающей задачи
-__attribute__( ( always_inline ) ) static inline void os_pass (void)
+__attribute__( ( always_inline, used  ) ) static inline void os_pass (void)
 {
     asm volatile ("push   {r3}           \n\t"
                   "mov    r3, #0         \n\t" // __switch
