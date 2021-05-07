@@ -60,18 +60,7 @@ const uint32_t data_of10raw[129] = {
 211317812,1384892415,907603093,594806763,389812560,255467559,1674232198,1097224813,719077253};
 
 
-
-
-
-const char txt_p_Infinity[] = "+Infinity";
-const char txt_m_Infinity[] = "-Infinity";
-
-
-const char txt_Infinity[] = " Inf";
 const char txt_NaN[] = "NaN";
-const char txt_NUL[] = "0.0";
-
-char float_text[OUT_TXT_SIZE_FLOATING + 1];
 
 char* floating_char(uint32_t massa, uint32_t of10raw, int16_t feeze, int16_t order10, char* txt);
 
@@ -90,7 +79,6 @@ char* nex_char(uint32_t value, char* text)  /// 68  байт
     *text = '0';
     return text;
 };
-
 
 char * i32_char(int32_t value, char* text)  /// 108  байт
 {
@@ -112,7 +100,6 @@ char* u32_char (uint32_t value, char* text)  /// 52  байт
     }while (value != 0);
     return text;
 };
-
 
 char* i64_char(int64_t value, char* text)
 {
@@ -162,7 +149,6 @@ void compress_char(char* tex_in, char* tex_out) /// 60  байт
         *(tex_in + OUT_TXT_SIZE_FLOATING) = 0;
     };
 };
-
 
 char* float_char(float value, char* text) /// 200 байт
 {
@@ -228,8 +214,6 @@ char* float_char(float value, char* text) /// 200 байт
 
 
 };
-
-
 
 char* double_char(double value, char* text)    /// 252 байт
 {
