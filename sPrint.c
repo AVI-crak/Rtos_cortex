@@ -9,6 +9,7 @@
 #include "sPrint.h"
 
 
+
 union float_raw
 {
     struct
@@ -34,8 +35,6 @@ union double_raw
     double      d_raw;
 };
 
-
-
 const int16_t data_otner[129] = {
 -308,-304,-299,-294,-289,-284,-280,-275,-270,-265,-260,-255,-251,-246,-241,-236,-231,-227,-222,-217,-212,
 -207,-202,-198,-193,-188,-183,-178,-174,-169,-164,-159,-154,-150,-145,-140,-135,-130,-125,-121,-116,-111,
@@ -59,25 +58,24 @@ const uint32_t data_of10raw[129] = {
 1445895146,947581843,621007236,406983302,266720577,1747979975,1145556156,750751682,492012622,322445392,
 211317812,1384892415,907603093,594806763,389812560,255467559,1674232198,1097224813,719077253};
 
-
 const char txt_NaN[] = "NaN";
-
 char* floating_char(uint32_t massa, uint32_t of10raw, int16_t feeze, int16_t order10, char* txt);
 
 char* nex_char(uint32_t value, char* text)  /// 68  байт
 {
-    uint32_t tmp;
-    *(text--) = 0;
+    int32_t tmp;
+    volatile char* tex; tex = text;
+    *(tex--) = 0;
     do
     {
-        tmp = value & 0x0000000F;
-        if (tmp > 9 ) *(text--) = tmp + 'A';
-            else *(text--) = tmp + '0';
+        tmp = value & 0x0F;
+        if (tmp > 9 ) *(tex--) = tmp + 55;
+            else *(tex--) = tmp + '0';
         value >>= 4;
     }while (value);
-    *text = 'x'; text++;
-    *text = '0';
-    return text;
+    *(tex--) = 'x';
+    *tex = '0';
+    return tex;
 };
 
 char * i32_char(int32_t value, char* text)  /// 108  байт
@@ -174,12 +172,9 @@ char* float_char(float value, char* text) /// 200 байт
     }else if ((order == 0) && (ftemp.massa == 0))
     {
         text[feeze++] = '0';
-        text[feeze++] = ',';
-        text[feeze++] = '0';
         text[feeze] = 0;
         return text;
     };
-
 
     cis = (order + 896) >> 4;
     feeze = order & 0x000F;
@@ -207,12 +202,7 @@ char* float_char(float value, char* text) /// 200 байт
     };
 
     text = floating_char( massa, of10raw, feeze,  order10, text);
-
     return text;
-
-
-
-
 };
 
 char* double_char(double value, char* text)    /// 252 байт
@@ -238,8 +228,6 @@ char* double_char(double value, char* text)    /// 252 байт
     }else if ((order == 0) && (dtemp.massa == 0))
     {
         text[feeze++] = '0';
-        text[feeze++] = ',';
-        text[feeze++] = '0';
         text[feeze] = 0;
         return text;
     };
@@ -256,8 +244,8 @@ char* double_char(double value, char* text)    /// 252 байт
         while (dtemp.sign == 0)
         {
             of10raw >>= 1; dtemp.u64_raw <<= 1;
-            if (of10raw < 100000000 )
-                {       //999999999
+            if (of10raw < 200000000 )
+                {
                     order10 -= 1;
                     of10raw *=10;
                 };
@@ -271,9 +259,7 @@ char* double_char(double value, char* text)    /// 252 байт
     };
 
     text = floating_char( massa, of10raw, feeze,  order10, text);
-
     return text;
-
 };
 
 char* floating_char(uint32_t massa, uint32_t of10raw, int16_t feeze, int16_t order10, char* txt) /// 304 байт
@@ -283,7 +269,7 @@ char* floating_char(uint32_t massa, uint32_t of10raw, int16_t feeze, int16_t ord
         while ( (feeze++) != 16)
         {
             of10raw >>= 1;
-            if (of10raw < 100000000 )
+            if (of10raw < 200000000 )
             {
                  order10 -= 1; of10raw *=10;
             };
@@ -293,42 +279,60 @@ char* floating_char(uint32_t massa, uint32_t of10raw, int16_t feeze, int16_t ord
         while ( (feeze--) != 0)
         {
             of10raw <<= 1;
-            if (of10raw > 999999999 )
+            if (of10raw > 2000000000 )
                 {
                     order10 += 1; of10raw /=10;
                 };
         };
     };
-
-    of10raw = (uint32_t) (((uint64_t) massa * of10raw ) >> 32);
-    char *mas_s, *mas_f, *ord_s, *ord_f; int32_t tmp;
+    union double_raw of10;
+    of10.u64_raw = (uint64_t) massa * of10raw;
+    char *mas_s, *mas_f, *ord_s, *ord_f; int32_t tmp, tff;
     mas_f = txt + 12;
-    mas_s = u32_char (of10raw, mas_f);
-    tmp = mas_f - mas_s; tmp -= 9;
+    mas_s = u32_char (of10.u_raw[1], mas_f);
+    of10.u_raw[1] = of10.u_raw[0] / 429496729;
+    *(mas_f++) = of10.u_raw[1] + '0';
+    of10.u_raw[0] = of10.u_raw[0] - (of10.u_raw[1] * 429496729);
+    of10.u_raw[1] = of10.u_raw[0] / 42949672;
+    *(mas_f++) = of10.u_raw[1] + '0';
+    of10.u_raw[0] = of10.u_raw[0] - (of10.u_raw[1] * 42949672);
+    of10.u_raw[1] = of10.u_raw[0] / 4294967;
+    *(mas_f++) = of10.u_raw[1] + '0';
+    *mas_f = 0;
+
+    tmp = mas_f - mas_s; tmp -= 12;
     order10 += tmp;
+    if ((-12 <= order10)&&(order10 < 15))
+    {
+        tmp = (order10 + 12) / 3; tmp *= 3; tmp -= 12;
+        tff = order10 - tmp; order10 = tmp;
+    } else tff = 0;
     if (order10 != 0)
     {
-        ord_f = txt + 19;
+        ord_f = txt + 23;
         ord_s = i32_char(order10, ord_f);
         *(--ord_s) = 'e';
         tmp = ord_f - ord_s;
     };
-
-    *(mas_s - 1) = *mas_s; *mas_s = ','; mas_s++;
-    if (*txt == '-') {*(mas_s - 3) = *txt; txt = mas_s - 3;}else txt = mas_s - 2;
+    if (*txt == '-') {*(mas_s - 2) = *txt; txt = mas_s - 2;}else txt = mas_s - 1;
+    *(mas_s - 1) = *mas_s;
+    if (tff > 0) { *mas_s = *(mas_s + 1); mas_s++; };
+    if (tff == 2) { *mas_s = *(mas_s + 1); mas_s++;};
+    *mas_s = '.'; mas_s++;
     ord_f = txt + OUT_TXT_SIZE_FLOATING - tmp;
     if (mas_f > ord_f ) mas_f = ord_f;
     *(mas_f--) = 0;
     while ((*(mas_f) == '0') && (mas_f != mas_s)) {*(mas_f) = 0; mas_f--;};
     mas_f++;
     if (order10 != 0 ) do{ tmp = *(ord_s++); *(mas_f++) = tmp; }while(tmp);
-
     return txt;
-
 };
 
-/*
 
+
+/*
+///  858993459200000000
+/// 8589934592000000000
  void tabl_grabl(void)
 {
     volatile uint32_t cis;
@@ -341,14 +345,14 @@ char* floating_char(uint32_t massa, uint32_t of10raw, int16_t feeze, int16_t ord
     for(cis2 = 0; cis2 !=129; cis2++)
     {
         cis = cis2 <<4;
-        of10raw = 200000000000000000;
+        of10raw = 858993459200000000;
         ofreze = 0;
     if (cis > 1023)
     {
         while ( (cis--) != 1023){
             of10raw <<= 1;
-            if (of10raw > 1999999999999999999 )
-                {       // 1999999999999999999
+            if (of10raw > 8589934592000000000 )
+                {
                     ofreze += 1;
                     of10raw /=10;
                 };
@@ -357,40 +361,44 @@ char* floating_char(uint32_t massa, uint32_t of10raw, int16_t feeze, int16_t ord
     {
         while ( (cis++) != 1023){
             of10raw >>= 1;
-            if (of10raw < 200000000000000000 )
-                {     // 1999999999999999999
+            if (of10raw < 858993459200000000 )
+                {     //
                     ofreze -= 1;
                     of10raw *=10;
                 };
         };
     };
-    cis3 = of10raw/1000000000;
+    cis3 = (uint32_t) (of10raw >> 32);
     cis4++;
-    if (cis4 > 9) {cis4 = 0; printo("\n");};
-   // printo(ofreze,",");
-    printo( cis3,",");
+    if (cis4 > 9) {cis4 = 0; printo("\n");}; printo( cis3,",");
+   // if (cis4 > 20) {cis4 = 0; printo("\n");}; printo(ofreze,",");
+  //
     };
 
 os_Delay_ms(20000);
 
 };
+
 */
 ///-------------------------
 /*
 printo ("\f");
+printo("\n 5.64231125e+5f = ", 5.64231125e+5f);
 printo("\n -8.65399996416e+12f = ", -8.65399996416e+12f);
 printo("\n 9.99999949672e+20f  = ", 9.99999949672e+20f);
 printo("\n -2.54999995232f     = ", -2.54999995232f);
 printo("\n 0.100000001490f     = ", 0.100000001490f);
 printo("\n -1.0000000000f      = ", -1.0f);
 printo("\n 25.5522403717f      = ", 2.55522403717e1f);
+printo("\n 3141592.75f         = ", 3141592.75f);
 printo("\n 1.95234170378e-30f  = ", 1.95234170378e-30f);
-printo("\n 4.85400005346e-06f  = ", 4.85400005346e-06f);
+printo("\n 4.8540005082e-06f  = ", 4.8540005082e-06f);
 printo("\n 1.99999988079f      = ", 1.99999988079f);
 printo("\n 2.00000023842f      = ", 2.00000023842f);
 printo("\n 3.40282346639e+38f  = ", 3.40282346639e+38f);
+printo("\n 4.20389539297E-45f  = ", 4.20389539297E-45f);
 printo("\n 1.40129846432e-45f  = ", 1.40129846432e-45f);
-printo("\n 2.000000e-308d      = ", 2.000000e-308d);
+printo("\n 2.2e-307d           = ", 2.2e-307d);
 printo("\n 2.000000001d        = ", 2.000000001d);
 printo("\n 1.999999999d        = ", 1.999999999d);
 printo("\n 9.999999999d        = ", 9.999999999d);
