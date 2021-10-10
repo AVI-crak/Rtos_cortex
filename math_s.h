@@ -157,7 +157,6 @@ float round_f(float value)
 /// вернуть дробный остаток деления
 float fmod_f(float value, float divider)
 {
-
    if (divider!=0.0f)
    {
        return( value - ( floor_f(value / divider) * divider));
@@ -194,6 +193,8 @@ int32_t fbit_error(float a_compare, float b_compare)
     b_com.f_raw = b_compare;
     if (a_com.i_raw > b_com.i_raw) out = a_com.i_raw - b_com.i_raw;
     else out = b_com.i_raw - a_com.i_raw;
+ // out = a_com.i_raw - b_com.i_raw;
+
     return out;
 };
 
@@ -394,7 +395,9 @@ float fact_f(float value)
 float deg_rad(float value_deg)
 {
     float rad;
-    rad = fmod_f(value_deg, 360.0f);
+    rad = abs_f(value_deg);
+    if ( rad > 360.0f) rad = fmod_f(value_deg, 360.0f);
+    else rad = value_deg;
     rad *= 1.11701071262f;
 	rad /=64.0f;
     return rad;
@@ -404,22 +407,21 @@ float deg_rad(float value_deg)
 
 
 /// sin input is radian +-2pi, output 1.0:-1.0.
-/// min |x|=2.62879913375e-23 error 1L
+/// min |x|=2.62879913375e-23 error 2L
 float sin_f(float value_rad)
 {
     float ret, rev, res;
-    if  (abs_f(value_rad) < 2.62879913375e-23f ) return value_rad;
+//  if  (abs_f(value_rad) < 2.62879913375e-23f ) return value_rad;
     ret = value_rad;
     if (ret < (PI/(-2.0f))) ret += Pi2;
     if (ret > (Pi+ PI/2.0f)) ret -= Pi2;
     else if (ret > (PI/2.0f)) ret = PI - ret;
     rev = ret * ret;
-    res = rev * 1.60590443721e-10f; // 1/13!
-    res -= 2.50521079437e-08f; // -1/11!
-    res *= rev; res += 2.75573188446e-06f; // 1/9!
-    res *= rev; res -= 0.000198412701138f; // 1/7!
-    res *= rev; res += 0.00833333469927f; // 1/5!
-    res *= rev; res -= 0.166666671634f; // 1/3!
+    res = rev * -2.50516549727e-08f;
+    res += 2.75573984254e-06f;
+    res *= rev; res += -0.000198412570171f;
+    res *= rev; res += 0.00833333469927f;
+    res *= rev; res += -0.166666656733f;
     res *= rev; res *= ret; res += ret;
     return res;
 };
