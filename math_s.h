@@ -191,9 +191,9 @@ int32_t fbit_error(float a_compare, float b_compare)
     union f__raw  b_com;
     a_com.f_raw = a_compare;
     b_com.f_raw = b_compare;
-    if (a_com.i_raw > b_com.i_raw) out = a_com.i_raw - b_com.i_raw;
-    else out = b_com.i_raw - a_com.i_raw;
- // out = a_com.i_raw - b_com.i_raw;
+  //  if (a_com.i_raw > b_com.i_raw) out = a_com.i_raw - b_com.i_raw;
+   // else out = b_com.i_raw - a_com.i_raw;
+  out = a_com.i_raw - b_com.i_raw;
 
     return out;
 };
@@ -399,42 +399,78 @@ float deg_rad(float value_deg)
     if ( rad > 360.0f) rad = fmod_f(value_deg, 360.0f);
     else rad = value_deg;
     rad *= 1.11701071262f;
-	rad /=64.0f;
+	rad *= 0.015625f;
     return rad;
 }
 
 
 
-
-/// sin input is radian +-2pi, output 1.0:-1.0.
-/// min |x|=2.62879913375e-23 error 2L
-float sin_f(float value_rad)
+/// cos input is radian +-pi/4
+float cos_f05(float value_rad)
 {
-    float ret, rev, res;
-//  if  (abs_f(value_rad) < 2.62879913375e-23f ) return value_rad;
-    ret = value_rad;
-    if (ret < (PI/(-2.0f))) ret += Pi2;
-    if (ret > (Pi+ PI/2.0f)) ret -= Pi2;
-    else if (ret > (PI/2.0f)) ret = PI - ret;
-    rev = ret * ret;
-    res = rev * -2.50516549727e-08f;
-    res += 2.75573984254e-06f;
-    res *= rev; res += -0.000198412570171f;
-    res *= rev; res += 0.00833333469927f;
-    res *= rev; res += -0.166666656733f;
-    res *= rev; res *= ret; res += ret;
+    float rev, res;
+    rev = value_rad * value_rad;
+    res = rev * -2.48015876423e-5f;
+    res += 0.0013888888061f;
+    res *= rev; res += -0.0416666641831f;
+    res *= rev; res += 0.5f;
+    res *= rev; res = 1.0f - res;
     return res;
 };
 
+/// sin input is radian +-pi/4
+float sin_f05(float value_rad)
+{
+    float rev, res;
+    rev = value_rad * value_rad;
+    res = rev * 2.75574029729e-06f;
+    res += -0.000198412628379f;
+    res *= rev; res += 0.00833333376795f;
+    res *= rev; res += -0.166666656733f;
+    res *= rev; res *= value_rad; res += value_rad;
+    return res;
+};
 
+/// sin input is radian, output 1.0:-1.0, error 1L
+float sin_f(float value_rad)
+{
+    float rev, res, inv; int32_t nix; inv = -1.0f;
+    if (value_rad < 0.0f) {rev = 0.0f - value_rad;}
+       else {rev = value_rad; inv = 1.0f;};
+    nix = (int32_t) (rev * 1.27323949337f);
+    switch (nix){
+       case 0: res = sin_f05(rev); break;
+       case 1: res = cos_f05((PI / 2.0f - rev)); break;
+       case 2: res = cos_f05((PI / 2.0f - rev)); break;
+       case 3: res = sin_f05(PI - rev); break;
+       case 4: res = sin_f05(PI - rev); break;
+       case 5: res = cos_f05(rev - (PI + Pi / 2.0f)); inv *= -1.0f; break;
+       case 6: res = cos_f05(rev - (PI + Pi / 2.0f)); inv *= -1.0f; break;
+       case 7: res = sin_f05(rev - Pi2); break;
+       default: rev = fmod_f(rev, Pi2);  res = sin_f(rev);
+    }; res *= inv;
+    return res;
+};
 
-/// cos input is radian -2pi:+2pi, output 1.0:-1.0.
+/// sin input is radian, output 1.0:-1.0, error 1L
 float cos_f(float value_rad)
 {
-    float rew;
-    rew = value_rad + (PI/2.0f);
-    if (rew > Pi2) rew -= Pi2;
-    return sin_f(rew);
+    float rev, res; int32_t nix;
+    if (value_rad < 0.0f) rev = 0.0f - value_rad;
+       else rev = value_rad;
+    nix = (int32_t) (rev * 1.27323949337f);
+    switch (nix){
+       case 0: res = cos_f05(rev); break;
+       case 1: res = sin_f05((PI / 2.0f - rev)); break;
+       case 2: res = sin_f05((PI / 2.0f - rev)); break;
+       case 3: res = -1.0f * cos_f05(PI - rev); break;
+       case 4: res = -1.0f * cos_f05(PI - rev); break;
+       case 5: res = sin_f05(rev - (PI + Pi / 2.0f)); break;
+       case 6: res = sin_f05(rev - (PI + Pi / 2.0f)); break;
+       case 7: res = cos_f05(rev - Pi2); break;
+       default: rev = fmod_f(rev, Pi2);  res = cos_f(rev);
+    };
+    return res;
 };
 
 
@@ -448,16 +484,16 @@ double sin_d(double value_rad)
     if (ret > (Pi_d * 1.5)) ret -= Pi_d * 2.0;
     else if (ret > (Pi_d / 2.0)) ret = Pi_d - ret;
     rev = ret * ret;
-    res = rev * 1.9572941063391261230847574373505e-20; // +1/21!
-    res += -8.2206352466243297169559812368723e-18; // -1/19!
-    res *= rev; res += 2.8114572543455207631989455830103e-15; // +1/17
-    res *= rev; res += -7.6471637318198164759011319857881e-13; // -1/15!
-    res *= rev; res += 1.6059043836821614599392377170155e-10; // +1/13!
-    res *= rev; res += -2.5052108385441718775052108385442e-8; // -1/11!
-    res *= rev; res += 2.7557319223985890652557319223986e-6; // +1/9!
-    res *= rev; res += -1.984126984126984126984126984127e-4; // -1/7!
-    res *= rev; res += 8.3333333333333333333333333333333e-3; // +1/5!
-    res *= rev; res += -0.16666666666666666666666666666667; // -1/3!
+    res = rev * 1.0/51090942171709440000.0; // +1/21!
+    res += -1.0/121645100408832000.0; // -1/19!
+    res *= rev; res += 1.0/355687428096000.0; // +1/17
+    res *= rev; res += -1.0/1307674368000.0; // -1/15!
+    res *= rev; res += 1.0/6227020800.0; // +1/13!
+    res *= rev; res += -1.0/39916800.0; // -1/11!
+    res *= rev; res += 1.0/362880.0; // +1/9!
+    res *= rev; res += -1.0/5040.0; // -1/7!
+    res *= rev; res += 1.0/120.0; // +1/5!
+    res *= rev; res += -1.0/6.0; // -1/3!
     res *= rev; res *= ret; res += ret;
     return res;
 };
@@ -475,7 +511,7 @@ double cos_d(double value_rad)
 // error 1/5000
 float sin__f(float value_rad)
 {
-    register float ret, rev, res;
+    float ret, rev, res;
     ret = value_rad; ret *= (Pi/2.0f);
     if (ret < 0.0f) ret += 4.0f;
     if (ret >= 3.0f) ret -= 4.0f;
@@ -487,6 +523,8 @@ float sin__f(float value_rad)
     res *= ret;
     return res;
 };
+
+
 
 /// tab = 1.0f; s = 2.0f;
 /// (tab *= s++; tab *= s++;) x(n) = -1.0f/tab;
@@ -666,23 +704,20 @@ float acos_f(float value)
 
 
 
-/// atan input (sin/cos), output pi:-pi.
-/// max |x|=16782358 error 2L
+/// atan input (sin/cos), output +pi:-pi, error 2L
 float atan_f(float value)
 {
     float ret, rex, rez;
     float singl, errors;
     if(value < 0.0f) singl = -1.0f; else singl = 1.0f;
     ret = singl * value;
-    if (ret > 16782358.0f) return (1.57079637051f * singl);
+    if (ret > 16782358.0f){return (1.57079637051f * singl);}
     else if(ret > 3.28f){errors = 1.57079637051f; ret = -1.0f / ret;}
     else if(ret > 0.8f){errors = 0.982793807983f; rex = 1.5f * ret + 1.0f; ret -= 1.5f; ret /= rex;}
-    else if(ret > 0.26f){errors = 0.463647633791f; rex = 2.0f * ret - 1.0f; ret += 2.0f; ret = rex / ret;}
-    else if(ret > 7.09616335826e-15f) errors = 0.0f; else return value;
+    else if(ret > 0.26f){errors = 0.463647603989f; rex = 2.0f * ret - 1.0f; ret += 2.0f; ret = rex / ret;}
+    else if(ret > 7.09616335826e-15f){errors = 0.0f;} else return value;
     rex = ret * ret;
-    rez = ret * 0.0588235296309f;  //1/17
-    rez *= rex; rez += ret * -0.0666666701436f; // -1/15
-    rez *= rex; rez += ret * 0.0769230797887f; // 1/13
+    rez = ret * 0.0769230797887f; // 1/13
     rez *= rex; rez += ret * -0.0909090936184f;  // -1/11
     rez *= rex; rez += ret * 0.111111111939;  // 1/9
     rez *= rex; rez += ret * -0.142857149243f;  // -1/7
@@ -694,9 +729,7 @@ float atan_f(float value)
 };
 
 
-
-/// atan2 input +-1.0, output 0:2pi
-/// error 3L
+/// atan2 input +-1.0, output 0:2pi, error 3L
 float atan2_f(float value_sin, float value_cos)
 {
     float rep;
@@ -933,21 +966,46 @@ float ldexp(float value, int8_t exp)
 
 
 
-Rad_0x3F2FF940  error_4  atan2_0x3F2FF944  sin_634.527504444e-3  cos_772.900223731e-3
-Rad_0x3F3557E8  error_4  atan2_0x3F3557EC  sin_650.598764419e-3  cos_759.42158699e-3
-Rad_0x3F394B90  error_4  atan2_0x3F394B94  sin_662.243723869e-3  cos_749.28843975e-3
-Rad_0x3F3A71D0  error_4  atan2_0x3F3A71D4  sin_665.601253509e-3  cos_746.307492256e-3
-Rad_0x3F3B1750  error_4  atan2_0x3F3B1754  sin_667.48380661e-3  cos_744.624257087e-3
-Rad_0x3F497738  error_4  atan2_0x3F49773C  sin_708.221197128e-3  cos_705.990552902e-3
-Rad_0x3F4B25C8  error_4  atan2_0x3F4B25CC  sin_712.844133377e-3  cos_701.322436332e-3
-Rad_0x3F4D6228  error_4  atan2_0x3F4D622C  sin_718.942046165e-3  cos_695.0699687e-3
-Rad_0x3F4D8D20  error_4  atan2_0x3F4D8D24  sin_719.397604465e-3  cos_694.598436355e-3
-Rad_0x3F4EFD78  error_4  atan2_0x3F4EFD7C  sin_723.290205001e-3  cos_690.544128417e-3
-Rad_0x3F5044D0  error_4  atan2_0x3F5044D4  sin_726.730346679e-3  cos_686.922788619e-3
-Rad_0x3F5519F0  error_4  atan2_0x3F5519F4  sin_739.567160606e-3  cos_673.082709312e-3
-Rad_0x3F597430  error_4  atan2_0x3F597434  sin_750.90354681e-3  cos_660.411834716e-3
-Rad_0x3F5A1ED0  error_4  atan2_0x3F5A1ED4  sin_752.620398998e-3  cos_658.454596996e-3
-Rad_0x40C90FDA  error_1  atan2_0x40C90FDA  sin_-476.837155e-9  cos_1.0 END
+/// sin input is radian +-2pi, output 1.0:-1.0.
+/// min |x|=2.62879913375e-23 error 2L
+float sin_f(float value_rad)
+{
+    float ret, rev, res;
+//  if  (abs_f(value_rad) < 2.62879913375e-23f ) return value_rad;
+    ret = value_rad;
+    if (ret < (PI/(-2.0f))) ret += Pi2;
+    if (ret > (Pi+ PI/2.0f)) ret -= Pi2;
+    else if (ret > (PI/2.0f)) ret = PI - ret;
+    rev = ret * ret;
+    res = rev * -2.50516549727e-08f;
+    res += 2.75573984254e-06f;
+    res *= rev; res += -0.000198412570171f;
+    res *= rev; res += 0.00833333469927f;
+    res *= rev; res += -0.166666656733f;
+    res *= rev; res *= ret; res += ret;
+    return res;
+};
+
+/// sin input is radian +-2pi, output 1.0:-1.0.
+/// min |x|=2.62879913375e-23 error 1L
+float sin_f(float value_rad)
+{
+    float ret, rev, res;
+    if  (abs_f(value_rad) < 2.62879913375e-23f ) return value_rad;
+    ret = value_rad;
+    if (ret < (PI/(-2.0f))) ret += Pi2;
+    if (ret > (Pi+ PI/2.0f)) ret -= Pi2;
+    else if (ret > (PI/2.0f)) ret = PI - ret;
+    rev = ret * ret;
+    res = rev * 1.60590443721e-10f; // 1/13!
+    res -= 2.50521079437e-08f; // -1/11!
+    res *= rev; res += 2.75573188446e-06f; // 1/9!
+    res *= rev; res -= 0.000198412701138f; // 1/7!
+    res *= rev; res += 0.00833333469927f; // 1/5!
+    res *= rev; res -= 0.166666671634f; // 1/3!
+    res *= rev; res *= ret; res += ret;
+    return res;
+};
 
 
 
