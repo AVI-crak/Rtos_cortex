@@ -18,14 +18,13 @@
 
 #include <stdint.h>
 #include "monitor.h"
+
 #include "RtoS_.h"
-
-
+/// os_pass() - Command for OS, task forced switching
+/// os_data.system_us - System time, step 1ms
 
  char    _std_out_buffer[eb_buf_zize_out] __attribute__ ((aligned (4)));
  char    _std_in_buffer[eb_buf_zize_in] __attribute__ ((aligned (4)));
-
-
 
 static struct _stdout
 {
@@ -47,9 +46,7 @@ static struct _stdin
 
 __attribute__( ( always_inline ) ) static inline void delay( uint32_t volatile time_tmp){do {time_tmp--;} while ( time_tmp );};
 
-/// print text
-/// os_pass() - Command for OS, task forced switching
-/// os_data.system_us - System time, step 1ms
+/// print text to OS
 void monitor_print (char* text)
 {
     static uint8_t status = 0;
@@ -57,7 +54,7 @@ void monitor_print (char* text)
     while (status == 1)os_pass(); /// busy there
     status = 1;
     char* in_txt;
-    uint32_t temp_h, temp_t;
+    uint_fast16_t temp_h, temp_t;
     int32_t temp_tim;
     temp_tim = os_data.system_us + 2000;
     temp_tim = 0 - temp_tim;
@@ -88,6 +85,44 @@ void monitor_print (char* text)
     status = 0;
 };
 
+/// print text
+void monitor_print2(char* text) {
+  static uint8_t status = 0;
+  if (status != 0)
+    return;
+  uint32_t temp_h;
+  int32_t temp_tim;
+  char* in_txt; in_txt = text;
+  temp_tim = 200000;  // anti-stick / time
+  temp_h = _eb_monitor_stdout.head + 1;
+  if (temp_h == eb_buf_zize_out) temp_h = 0;
+#if (eb_buf_zize_out > 256)  // anti-uneven reading
+  volatile uint32_t temp_t;
+  while (*in_txt != 0) {
+    do {
+      temp_t = _eb_monitor_stdout.tail;
+      delay(75);
+    } while ((temp_t != _eb_monitor_stdout.tail) ||
+             ((temp_h == temp_t) && (temp_tim--)));
+#else
+  while (*in_txt != 0) {
+    while ((temp_h == _eb_monitor_stdout.tail) && (temp_tim--))
+      delay(75);
+#endif
+    if (temp_tim == 0) {
+      status = 1;
+      return;
+    };
+    _eb_monitor_stdout.ptr[temp_h] = *(in_txt++);
+    _eb_monitor_stdout.head = temp_h;
+    temp_h++;
+    temp_tim = 200000;
+    if (temp_h == eb_buf_zize_out)
+      temp_h = 0;
+    __DSB();
+  };
+};
+
 uint32_t monitor_balance(void)
 {
     uint32_t temp_h, temp_t, out;
@@ -97,7 +132,7 @@ uint32_t monitor_balance(void)
     if (temp_h < temp_t) out = temp_t - temp_h - 1;
         else out = temp_t + eb_buf_zize_out - 1 - temp_h;
     return out;
-}
+};
 
 char *monitor_scan (void)
 {
@@ -110,8 +145,4 @@ char *monitor_scan (void)
             _eb_monitor_stdin.tail = tail;
         };
         return m_ms_buf;
-
-
 };
-
-
