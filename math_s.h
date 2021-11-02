@@ -1,10 +1,9 @@
-
-/// Ð´Ñ€ÐµÐ²Ð½ÐµÐµ Ð·Ð»Ð¾ Ð½Ð° Ð½Ð¾Ð²Ñ‹Ð¹ Ð»Ð°Ð´
-/// Ð² Ð¿Ñ€Ð¾Ñ†ÐµÑÑÐµ %0,5
+/// äðåâíåå çëî íà íîâûé ëàä
+/// â ïðîöåññå %0,6
 
 /// + https://github.com/xboxfanj/math-neon
 /// + gcc\math.h
-/// + ÑÐ¾Ð±ÑÐ²ÐµÐ½Ð½Ð¾Ðµ Ð¼Ð½ÐµÐ½Ð¸Ðµ
+/// + ñîáñâåííîå ìíåíèå
 
 #ifndef MATH_s
 #define MATH_s
@@ -24,10 +23,8 @@
 
 
 
-union f__raw
-{
-    struct
-    {
+union f__raw {
+    struct {
         uint32_t massa  :23;
         uint32_t order  :8;
         uint32_t sign   :1;
@@ -36,10 +33,8 @@ union f__raw
     float       f_raw;
 };
 
-union d__raw
-{
-    struct
-    {
+union d__raw {
+    struct {
         uint64_t massa  :52;
         uint64_t order  :11;
         uint64_t sign   :1;
@@ -50,76 +45,120 @@ union d__raw
 };
 
 
-/// rounding up to the smallest integer that is greater than or equal to the |argument|
-/// Ð¾ÐºÑ€ÑƒÐ³Ð»ÐµÐ½Ð¸Ðµ Ð´Ð¾ Ð½Ð°Ð¸Ð¼ÐµÐ½ÑŒÑˆÐµÐ³Ð¾ Ñ†ÐµÐ»Ð¾Ð³Ð¾, ÐºÐ¾Ñ‚Ð¾Ñ€Ð¾Ðµ Ð±Ð¾Ð»ÑŒÑˆÐµ Ð¸Ð»Ð¸ Ñ€Ð°Ð²Ð½Ð¾ |Ð°Ñ€Ð³ÑƒÐ¼ÐµÐ½Ñ‚Ñƒ|
-#ifdef __CM7_REV
-float ceil_f(float value)
-{
-    float rep; int32_t tmp;
-    tmp = (int32_t)value;
-    if (tmp > 0) asm volatile ("vrintp.f32 %0,%1" : "=t"(rep) : "t"(value));
-        else asm volatile ("vrintm.f32 %0,%1" : "=t"(rep) : "t"(value));
-    return rep;
-}
+#if ((defined (__ARM_FP)) && (__ARM_FP == 14) && ARM_MATH_CM7)
+#define _ARM_CODE_V   6
+#elif ((defined (__ARM_FP)) && (__ARM_FP == 12) && ARM_MATH_CM7)
+#define _ARM_CODE_V   5
+#elif ((defined (__ARM_FP)) && (__ARM_FP == 4) && ARM_MATH_CM7)
+#define _ARM_CODE_V   4
+#elif ((defined (__ARM_FP)) && (__ARM_FP == 4) && ARM_MATH_CM4)
+#define _ARM_CODE_V   3
+#elif (ARM_MATH_CM3)
+#define _ARM_CODE_V   2
+#elif (ARM_MATH_CM0)
+#define _ARM_CODE_V   1
 #else
-float ceil_f(float value)
-{
-    union f__raw Ftemp;
-    Ftemp.f_raw = value;
-    uint32_t err = 0;
-    int_fast8_t ord = (int_fast8_t)Ftemp.order - 127;
-    if (ord >= 0)
-    {
-        ord = 23 - ord;
-        if(ord > 0)
-        {
-            err = Ftemp.i_raw;
-            Ftemp.i_raw = ((Ftemp.i_raw >>ord)<<ord);
-            err -= Ftemp.i_raw;
-            if (err != 0)
-            {
-                if (Ftemp.sign == 0) return (Ftemp.f_raw + 1.0f);
-                    else return (Ftemp.f_raw - 1.0f);
-            };
-        }else return value;
-    }else return 0.0f;
-}
+#define _ARM_CODE_V   0
 #endif
 
 
-/// drop a fraction below zero
-/// Ð¾Ñ‚Ð±Ñ€Ð¾ÑÐ¸Ñ‚ÑŒ Ð´Ñ€Ð¾Ð±Ð½Ð¾Ðµ Ð·Ð½Ð°Ñ‡ÐµÐ½Ð¸Ðµ Ð½Ð¸Ð¶Ðµ Ð½ÑƒÐ»Ñ
-#ifdef __CM7_REV
-static inline float floor_f(float value)
+
+/// x=(float)((int32_t)x)
+#if (_ARM_CODE_V >= 4)
+static inline float rint_f(float value)
 {
     float rep;
     asm volatile ("vrintz.f32 %0,%1" : "=t"(rep) : "t"(value));
     return rep;
 }
 #else
-float floor_f(float value)
+float rint_f(float value)
 {
-    union f__raw Ftemp;
-    Ftemp.f_raw = value;
-    int_fast8_t ord = (int_fast8_t)Ftemp.order - 127;
-    if (ord < 0) return 0.0f;
-    else
-    {
-        ord = 23 - ord;
-        if(ord > 0)
-        {
-            Ftemp.i_raw = ((Ftemp.i_raw >>ord)<<ord);
-        };
+    union f__raw raw;
+    int32_t exx;
+    raw.f_raw = value;
+    exx = 150 - raw.order;
+    if (exx > 0) {
+        if (exx > 23) exx = 31;
+        raw.i_raw >>=  exx;
+        raw.i_raw <<= exx;
     };
-    return Ftemp.f_raw;
+    return  raw.f_raw;
+};
+#endif
+
+/// round towards Plus Infinity
+#if (_ARM_CODE_V >= 4)
+static inline float ceil_f(float value)
+{
+    float rep;
+    asm volatile ("vrintp.f32 %0,%1" : "=t"(rep) : "t"(value));
+    return rep;
 }
+#else
+float ceil_f(float value)
+{
+    union f__raw raw;
+    int32_t exx;
+    uint32_t err;
+    raw.f_raw = value;
+    exx = 150 - raw.order;
+    if (exx > 0) {
+        if (exx > 23) {
+           if (raw.i_raw < 0) raw.i_raw = 0x80000000;
+           else if (raw.i_raw)   raw.i_raw = 0x3f800000;
+           else raw.i_raw = 0;
+           return  raw.f_raw;
+        };
+        err = raw.i_raw >> exx;
+        if (!raw.sign) {
+            if (raw.i_raw - (err << exx)) err += 1;
+        };
+        raw.i_raw = err << exx;
+    };
+    return  raw.f_raw;
+};
 #endif
 
 
+/// round towards Minus Infinity
+#if (_ARM_CODE_V >= 4)
+static inline float floor_f(float value)
+{
+    float rep;
+    asm volatile ("vrintm.f32 %0,%1" : "=t"(rep) : "t"(value));
+    return rep;
+}
+#else
+float floor_f(float value)
+{
+    union f__raw raw;
+    int32_t exx, sig;
+    uint32_t err;
+    raw.f_raw = value;
+    sig = raw.sign;
+    exx = 150 - raw.order;
+    if (exx > 0) {
+        if (exx > 23) {
+           err = raw.i_raw << 1; exx = 31;
+           if ((err != 0) && (sig)) {
+                   raw.i_raw = 0xBf800000;
+                   return  raw.f_raw;
+                   };
+        };
+        err = raw.i_raw >> exx;
+        if (sig) {
+            if (raw.i_raw - (err << exx)) err += 1;
+        };
+        raw.i_raw = err << exx;
+    };
+    return  raw.f_raw;
+};
+#endif
 
-/// round up to the nearest whole
-/// Ð¾ÐºÑ€ÑƒÐ³Ð»Ð¸Ñ‚ÑŒ Ð´Ð¾ Ð±Ð»Ð¸Ð¶Ð°Ð¹ÑˆÐµÐ³Ð¾ Ñ†ÐµÐ»Ð¾Ð³Ð¾
-#ifdef __CM7_REV
+
+/// round to the nearest integer
+#if (_ARM_CODE_V >= 4)
 static inline float round_f(float value)
 {
     float rep;
@@ -129,44 +168,37 @@ static inline float round_f(float value)
 #else
 float round_f(float value)
 {
-    union f__raw Ftemp;
-    Ftemp.f_raw = value;
-    uint32_t err = 0;
-    int_fast8_t ord = (int_fast8_t)Ftemp.order - 127;
-    if (ord >= 0)
-    {
-        ord = 23 - ord;
-        if(ord > 0)
-        {
-            err = Ftemp.i_raw;
-            Ftemp.i_raw = ((Ftemp.i_raw >>ord)<<ord);
-            err -= Ftemp.i_raw;
-            err *= 2; err >>= ord;
-            if (err != 0)
-            {
-                if (Ftemp.sign == 0) return (Ftemp.f_raw + 1.0f);
-                    else return (Ftemp.f_raw - 1.0f);
-            }else return Ftemp.f_raw;
-        }else return value;
-    }else return 0.0f;
-}
+    union f__raw raw;
+    int32_t exx;
+    uint32_t ex_mask;
+    raw.f_raw = value;
+    exx = raw.order - 126;
+    if (exx < 0) {
+        raw.i_raw &= 0x80000000;
+    } else if (exx < 24) {
+        ex_mask = 0x00ffffff >> exx;
+        raw.i_raw += 0x00800000 >> exx;
+        if (exx == 0) ex_mask >>= 1;
+        raw.i_raw &= ~ex_mask;
+    };
+    return  raw.f_raw;
+};
 #endif
 
 
+
+
 /// return fractional remainder of division
-/// Ð²ÐµÑ€Ð½ÑƒÑ‚ÑŒ Ð´Ñ€Ð¾Ð±Ð½Ñ‹Ð¹ Ð¾ÑÑ‚Ð°Ñ‚Ð¾Ðº Ð´ÐµÐ»ÐµÐ½Ð¸Ñ
 float fmod_f(float value, float divider)
 {
-   if (divider!=0.0f)
-   {
-       return( value - ( floor_f(value / divider) * divider));
-   } else return 0.0f;
+    if (divider!=0.0f) {
+        return( value - ( rint_f(value / divider) * divider));
+    } else return 0.0f;
 };
 
 
 /// return |value|
-/// ÑÐ±Ñ€Ð¾ÑÐ¸Ñ‚ÑŒ Ð·Ð½Ð°Ðº
-#if defined (__CM7_REV) || defined (__CM4_REV)
+#if (_ARM_CODE_V >= 4)
 static inline float abs_f(float value)
 {
     float rep;
@@ -183,7 +215,7 @@ float abs_f(float value)
 };
 #endif
 
-/// Ð¾ÑˆÐ¸Ð±ÐºÐ° Ð² Ð¼Ð»Ð°Ð´ÑˆÐ¸Ñ… Ð±Ð¸Ñ‚Ð°Ñ…
+/// îøèáêà â ìëàäøèõ áèòàõ
 int32_t fbit_error(float a_compare, float b_compare)
 {
     int32_t out;
@@ -191,14 +223,14 @@ int32_t fbit_error(float a_compare, float b_compare)
     union f__raw  b_com;
     a_com.f_raw = a_compare;
     b_com.f_raw = b_compare;
-  //  if (a_com.i_raw > b_com.i_raw) out = a_com.i_raw - b_com.i_raw;
-   // else out = b_com.i_raw - a_com.i_raw;
-  out = a_com.i_raw - b_com.i_raw;
+    //  if (a_com.i_raw > b_com.i_raw) out = a_com.i_raw - b_com.i_raw;
+    // else out = b_com.i_raw - a_com.i_raw;
+    out = a_com.i_raw - b_com.i_raw;
 
     return out;
 };
 
-/// Ð¾ÑˆÐ¸Ð±ÐºÐ° Ð² Ð¼Ð»Ð°Ð´ÑˆÐ¸Ñ… Ð±Ð¸Ñ‚Ð°Ñ…
+/// îøèáêà â ìëàäøèõ áèòàõ
 int64_t dbit_error(double a_compare, double b_compare)
 {
     int64_t out;
@@ -214,133 +246,138 @@ int64_t dbit_error(double a_compare, double b_compare)
 
 
 const float __expf_rng[2] = {
-	1.442695041f,
-	0.693147180f,
+    1.442695041f,
+    0.693147180f,
 };
 
 const float __expf_lut[8] = {
-	0.9999999916728642f,		//p0
-	0.04165989275009526f, 	//p4
-	0.5000006143673624f, 	//p2
-	0.0014122663401803872f, 	//p6
-	1.000000059694879f, 		//p1
-	0.008336936973260111f, 	//p5
-	0.16666570253074878f, 	//p3
-	0.00019578093328483123f,	//p7
+    0.9999999916728642f,		//p0
+    0.04165989275009526f, 	//p4
+    0.5000006143673624f, 	//p2
+    0.0014122663401803872f, 	//p6
+    1.000000059694879f, 		//p1
+    0.008336936973260111f, 	//p5
+    0.16666570253074878f, 	//p3
+    0.00019578093328483123f,	//p7
 };
 
 /// Raising the number E to the power of a value
-/// Ð’Ð¾Ð·Ð²ÐµÐ´ÐµÐ½Ð¸Ðµ Ñ‡Ð¸ÑÐ»Ð° E Ð² ÑÑ‚ÐµÐ¿ÐµÐ½ÑŒ value
+/// Âîçâåäåíèå ÷èñëà E â ñòåïåíü value
 float exp_f(float value)
 {
     union f__raw Ftemp;
-    if ( value > 88.7228317f) {Ftemp.i_raw = 0; Ftemp.order = 0xFF; return Ftemp.f_raw;};
-	float tmp1, tmp2, tmp3, tmp4, tmp5;
-	int8_t ord;
+    if ( value > 88.7228317f) {
+        Ftemp.i_raw = 0;
+        Ftemp.order = 0xFF;
+        return Ftemp.f_raw;
+    };
+    float tmp1, tmp2, tmp3, tmp4, tmp5;
+    int8_t ord;
 
 
-	ord = (int8_t) (value * __expf_rng[0]);
-	value = value - ((float) ord) * __expf_rng[1];
-	tmp1 = (__expf_lut[4] * value) + (__expf_lut[0]);
-	tmp2 = (__expf_lut[6] * value) + (__expf_lut[2]);
-	tmp3 = (__expf_lut[5] * value) + (__expf_lut[1]);
-	tmp4 = (__expf_lut[7] * value) + (__expf_lut[3]);
-	tmp5 = value * value;
-	tmp1 = tmp1 + tmp2 * tmp5;
-	tmp3 = tmp3 + tmp4 * tmp5;
-	tmp5 = tmp5 * tmp5;
-	Ftemp.f_raw = tmp1 + tmp3 * tmp5;
-	Ftemp.order += ord;
-	return Ftemp.f_raw;
+    ord = (int8_t) (value * __expf_rng[0]);
+    value = value - ((float) ord) * __expf_rng[1];
+    tmp1 = (__expf_lut[4] * value) + (__expf_lut[0]);
+    tmp2 = (__expf_lut[6] * value) + (__expf_lut[2]);
+    tmp3 = (__expf_lut[5] * value) + (__expf_lut[1]);
+    tmp4 = (__expf_lut[7] * value) + (__expf_lut[3]);
+    tmp5 = value * value;
+    tmp1 = tmp1 + tmp2 * tmp5;
+    tmp3 = tmp3 + tmp4 * tmp5;
+    tmp5 = tmp5 * tmp5;
+    Ftemp.f_raw = tmp1 + tmp3 * tmp5;
+    Ftemp.order += ord;
+    return Ftemp.f_raw;
 }
 
 
 const float __log10f_lut[9] = {
-	-0.99697286229624f, 		//p0
-	-1.07301643912502f, 		//p4
-	-2.46980061535534f, 		//p2
-	-0.07176870463131f, 		//p6
-	2.247870219989470f, 		//p1
-	0.366547581117400f, 		//p5
-	1.991005185100089f, 		//p3
-	0.006135635201050f,         //p7
-	0.3010299957f,              //rng
+    -0.99697286229624f, 		//p0
+    -1.07301643912502f, 		//p4
+    -2.46980061535534f, 		//p2
+    -0.07176870463131f, 		//p6
+    2.247870219989470f, 		//p1
+    0.366547581117400f, 		//p5
+    1.991005185100089f, 		//p3
+    0.006135635201050f,         //p7
+    0.3010299957f,              //rng
 };
 
 const float __log_e_f_lut[9] = {
-	-2.295614848256274, 	//p0
-	-2.470711633419806, 	//p4
-	-5.686926051100417, 	//p2
-	-0.165253547131978, 	//p6
-	+5.175912446351073, 	//p1
-	+0.844006986174912, 	//p5
-	+4.584458825456749, 	//p3
-	+0.014127821926000,		//p7
-	0.693147180f,           //rng
+    -2.295614848256274, 	//p0
+    -2.470711633419806, 	//p4
+    -5.686926051100417, 	//p2
+    -0.165253547131978, 	//p6
+    +5.175912446351073, 	//p1
+    +0.844006986174912, 	//p5
+    +4.584458825456749, 	//p3
+    +0.014127821926000,		//p7
+    0.693147180f,           //rng
 };
 
 /// Logarithm value for base 2,10,e
-/// Ð›Ð¾Ð³Ð°Ñ€Ð¸Ñ„Ð¼ value Ð¿Ð¾ Ð¾ÑÐ½Ð¾Ð²Ð°Ð½Ð¸ÑŽ 2,10,e
+/// Ëîãàðèôì value ïî îñíîâàíèþ 2,10,e
 float log_f(float value, int_fast8_t base_2_10_e)
 {
-	float tmp1, tmp2, tmp3, tmp4, tmp5;
-	int8_t ord, ord1;
-	union f__raw Ftemp;
-	const float *_lut;
-	if (base_2_10_e != 10) _lut = __log_e_f_lut; else _lut = __log10f_lut;
+    float tmp1, tmp2, tmp3, tmp4, tmp5;
+    int8_t ord, ord1;
+    union f__raw Ftemp;
+    const float *_lut;
+    if (base_2_10_e != 10) _lut = __log_e_f_lut;
+    else _lut = __log10f_lut;
 
-	Ftemp.f_raw = value;
-	ord = Ftemp.order; ord1 = ord;
-	ord -= 127; ord1 -= ord;
-	Ftemp.order = ord1;
+    Ftemp.f_raw = value;
+    ord = Ftemp.order;
+    ord1 = ord;
+    ord -= 127;
+    ord1 -= ord;
+    Ftemp.order = ord1;
 
-	tmp5= Ftemp.f_raw * Ftemp.f_raw;
-	tmp1 = (_lut[4] * Ftemp.f_raw) + (_lut[0]);
-	tmp2 = (_lut[6] * Ftemp.f_raw) + (_lut[2]);
-	tmp3 = (_lut[5] * Ftemp.f_raw) + (_lut[1]);
-	tmp4 = (_lut[7] * Ftemp.f_raw) + (_lut[3]);
-	tmp1 = tmp1 + tmp2 * tmp5;
-	tmp3 = tmp3 + tmp4 * tmp5;
-	tmp5 = tmp5 * tmp5;
-	Ftemp.f_raw = tmp1 + tmp3 * tmp5;
-	Ftemp.f_raw += ((float) ord) * _lut[8];
-	if (base_2_10_e == 2) Ftemp.f_raw *= 1.442695040888965f;
-	return Ftemp.f_raw;
+    tmp5= Ftemp.f_raw * Ftemp.f_raw;
+    tmp1 = (_lut[4] * Ftemp.f_raw) + (_lut[0]);
+    tmp2 = (_lut[6] * Ftemp.f_raw) + (_lut[2]);
+    tmp3 = (_lut[5] * Ftemp.f_raw) + (_lut[1]);
+    tmp4 = (_lut[7] * Ftemp.f_raw) + (_lut[3]);
+    tmp1 = tmp1 + tmp2 * tmp5;
+    tmp3 = tmp3 + tmp4 * tmp5;
+    tmp5 = tmp5 * tmp5;
+    Ftemp.f_raw = tmp1 + tmp3 * tmp5;
+    Ftemp.f_raw += ((float) ord) * _lut[8];
+    if (base_2_10_e == 2) Ftemp.f_raw *= 1.442695040888965f;
+    return Ftemp.f_raw;
 }
 
 
 
 /// returns fractional remainder
-/// Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‰Ð°ÐµÑ‚ Ð´Ñ€Ð¾Ð±Ð½Ñ‹Ð¹ Ð¾ÑÑ‚Ð°Ñ‚Ð¾Ðº
+/// âîçâðàùàåò äðîáíûé îñòàòîê
 static inline float mod_f(float value)
 {
-   return(value - floor_f(value));
+    return(value - rint_f(value));
 }
 
 
 /// exponentiation value^degree
-/// Ð’Ð¾Ð·Ð²ÐµÐ´ÐµÐ½Ð¸Ðµ Ð² ÑÑ‚ÐµÐ¿ÐµÐ½ÑŒ value^degree
+/// Âîçâåäåíèå â ñòåïåíü value^degree
 float pow_f(float value,float degree)
 {
-    if(0 > value && fmod_f(degree, 1) == 0)
-    {
-        if(fmod_f(degree, 2) == 0)
+    if(0.0f > value && fmod_f(degree, 1.0f) == 0.0f) {
+        if(fmod_f(degree, 2.0f) == 0.0f)
             return (exp_f(log_f( -value, 'e') * degree));
         else return (-exp_f(log_f( -value, 'e') * degree));
-    }else if(0 > value && fmod_f( degree, 1) != 0)
-    {
-      return 0.0f;
-    }else
-    {
-        if(value != 0 || 0 >= degree)
+    } else if(0.0f > value && fmod_f( degree, 1.0f) != 0.0f) {
+        return 0.0f;
+    } else {
+        if(value != 0.0f || 0.0f >= degree)
             return (exp_f(log_f(value, 'e') * degree));
-    };return 0.0;
+    };
+    return 0.0f;
 };
 
 
 /// Extraction of the square root value
-/// Ð˜Ð·Ð²Ð»ÐµÑ‡ÐµÐ½Ð¸Ðµ ÐºÐ²Ð°Ð´Ñ€Ð°Ñ‚Ð½Ð¾Ð³Ð¾ ÐºÐ¾Ñ€Ð½Ñ value
-#if defined (__CM7_REV) || defined (__CM4_REV)
+/// Èçâëå÷åíèå êâàäðàòíîãî êîðíÿ value
+#if (_ARM_CODE_V >= 3)
 static inline float sqrt_f(float value)
 {
     float rep;
@@ -351,35 +388,35 @@ static inline float sqrt_f(float value)
 float sqrt_f(float value)
 #define magic_VRSQRTE  /// polynomial or magic_VRSQRTE
 {
- #ifdef magic_VRSQRTE
-	float tmp1, tmp2;
-	int32_t mas;
-	union f__raw Ftemp;
-	//fast invsqrt approx
-	Ftemp.f_raw = value;
-	Ftemp.i_raw = 0x5F3759DF - (Ftemp.i_raw >> 1);      //VRSQRTE
-	tmp2 = value * Ftemp.f_raw;
-	tmp1 = (3.0f - tmp2 * Ftemp.f_raw) * 0.5f;          //VRSQRTS
-	Ftemp.f_raw = Ftemp.f_raw * tmp1;
-	tmp2 = value * Ftemp.f_raw;
-	tmp1 = (3.0f - tmp2 * Ftemp.f_raw) * 0.5f;
+#ifdef magic_VRSQRTE
+    float tmp1, tmp2;
+    int32_t mas;
+    union f__raw Ftemp;
+    //fast invsqrt approx
+    Ftemp.f_raw = value;
+    Ftemp.i_raw = 0x5F3759DF - (Ftemp.i_raw >> 1);      //VRSQRTE
+    tmp2 = value * Ftemp.f_raw;
+    tmp1 = (3.0f - tmp2 * Ftemp.f_raw) * 0.5f;          //VRSQRTS
+    Ftemp.f_raw = Ftemp.f_raw * tmp1;
+    tmp2 = value * Ftemp.f_raw;
+    tmp1 = (3.0f - tmp2 * Ftemp.f_raw) * 0.5f;
     Ftemp.f_raw = Ftemp.f_raw * tmp1;
 
-	//fast inverse approx
-	value = Ftemp.f_raw;
-	mas = 0x3F800000 - (Ftemp.i_raw & 0x7F800000);
-	Ftemp.i_raw = Ftemp.i_raw + mas;
-	Ftemp.f_raw = 1.41176471f - 0.47058824f * Ftemp.f_raw;
-	Ftemp.i_raw = Ftemp.i_raw + mas;
-	tmp1 = 2.0f - Ftemp.f_raw * value;
-	Ftemp.f_raw = Ftemp.f_raw * tmp1;
-	tmp1 = 2.0f - Ftemp.f_raw * value;
-	Ftemp.f_raw = Ftemp.f_raw * tmp1;
+    //fast inverse approx
+    value = Ftemp.f_raw;
+    mas = 0x3F800000 - (Ftemp.i_raw & 0x7F800000);
+    Ftemp.i_raw = Ftemp.i_raw + mas;
+    Ftemp.f_raw = 1.41176471f - 0.47058824f * Ftemp.f_raw;
+    Ftemp.i_raw = Ftemp.i_raw + mas;
+    tmp1 = 2.0f - Ftemp.f_raw * value;
+    Ftemp.f_raw = Ftemp.f_raw * tmp1;
+    tmp1 = 2.0f - Ftemp.f_raw * value;
+    Ftemp.f_raw = Ftemp.f_raw * tmp1;
 
-	return Ftemp.f_raw;
- #else
-	return (pow_f(value, 0.5f ));
- #endif
+    return Ftemp.f_raw;
+#else
+    return (pow_f(value, 0.5f ));
+#endif
 }
 #endif
 
@@ -391,7 +428,7 @@ float fact_f(float value)
 }
 
 /// Converting degrees to radians
-/// ÐŸÐµÑ€ÐµÐ²Ð¾Ð´ Ð³Ñ€Ð°Ð´ÑƒÑÐ¾Ð² Ð² Ñ€Ð°Ð´Ð¸Ð°Ð½Ñ‹
+/// Ïåðåâîä ãðàäóñîâ â ðàäèàíû
 float deg_rad(float value_deg)
 {
     float rad;
@@ -399,7 +436,7 @@ float deg_rad(float value_deg)
     if ( rad > 360.0f) rad = fmod_f(value_deg, 360.0f);
     else rad = value_deg;
     rad *= 1.11701071262f;
-	rad *= 0.015625f;
+    rad *= 0.015625f;
     return rad;
 }
 
@@ -412,9 +449,12 @@ float cos_f05(float value_rad)
     rev = value_rad * value_rad;
     res = rev * -2.48015876423e-5f;
     res += 0.0013888888061f;
-    res *= rev; res += -0.0416666641831f;
-    res *= rev; res += 0.5f;
-    res *= rev; res = 1.0f - res;
+    res *= rev;
+    res += -0.0416666641831f;
+    res *= rev;
+    res += 0.5f;
+    res *= rev;
+    res = 1.0f - res;
     return res;
 };
 
@@ -425,78 +465,93 @@ float sin_f05(float value_rad)
     rev = value_rad * value_rad;
     res = rev * 2.75574029729e-06f;
     res += -0.000198412628379f;
-    res *= rev; res += 0.00833333376795f;
-    res *= rev; res += -0.166666656733f;
-    res *= rev; res *= value_rad; res += value_rad;
+    res *= rev;
+    res += 0.00833333376795f;
+    res *= rev;
+    res += -0.166666656733f;
+    res *= rev;
+    res *= value_rad;
+    res += value_rad;
     return res;
 };
 
 /// sin input is radian, output 1.0:-1.0, error 1L
 float sin_f(float value_rad)
 {
-    float rev, res, inv; int32_t nix; inv = -1.0f;
+    float rev, res, inv;
+    int32_t nix;
+    inv = -1.0f;
     if (value_rad < 0.0f) {rev = 0.0f - value_rad;}
-       else {rev = value_rad; inv = 1.0f;};
-    nix = (int32_t) (rev * 1.27323949337f);
-    switch (nix){
-       case 0: res = sin_f05(rev); break;
-       case 1: res = cos_f05((PI / 2.0f - rev)); break;
-       case 2: res = cos_f05((PI / 2.0f - rev)); break;
-       case 3: res = sin_f05(PI - rev); break;
-       case 4: res = sin_f05(PI - rev); break;
-       case 5: res = cos_f05(rev - (PI + Pi / 2.0f)); inv *= -1.0f; break;
-       case 6: res = cos_f05(rev - (PI + Pi / 2.0f)); inv *= -1.0f; break;
-       case 7: res = sin_f05(rev - Pi2); break;
-       default: rev = fmod_f(rev, Pi2);  res = sin_f(rev);
-    }; res *= inv;
+    else {rev = value_rad; inv = 1.0f;};
+    do{
+        nix = (int32_t) (rev * 1.27323949337f);
+        if (nix > 7) { rev = fmod_f(rev, Pi2);};
+    }while (nix > 7);
+    switch (nix) {
+    case 0: res = sin_f05(rev); break;
+    case 1: res = cos_f05((PI / 2.0f - rev)); break;
+    case 2: res = cos_f05((PI / 2.0f - rev)); break;
+    case 3: res = sin_f05(PI - rev); break;
+    case 4: res = sin_f05(PI - rev); break;
+    case 5: res = cos_f05(rev - (PI + Pi / 2.0f)); inv *= -1.0f; break;
+    case 6: res = cos_f05(rev - (PI + Pi / 2.0f)); inv *= -1.0f; break;
+    case 7: res = sin_f05(rev - Pi2); break;
+    default: break;};
+    res *= inv;
     return res;
 };
 
 /// sin input is radian, output 1.0:-1.0, error 1L
 float cos_f(float value_rad)
 {
-    float rev, res; int32_t nix;
+    float rev, res;
+    int32_t nix;
     if (value_rad < 0.0f) rev = 0.0f - value_rad;
-       else rev = value_rad;
-    nix = (int32_t) (rev * 1.27323949337f);
-    switch (nix){
-       case 0: res = cos_f05(rev); break;
-       case 1: res = sin_f05((PI / 2.0f - rev)); break;
-       case 2: res = sin_f05((PI / 2.0f - rev)); break;
-       case 3: res = -1.0f * cos_f05(PI - rev); break;
-       case 4: res = -1.0f * cos_f05(PI - rev); break;
-       case 5: res = sin_f05(rev - (PI + Pi / 2.0f)); break;
-       case 6: res = sin_f05(rev - (PI + Pi / 2.0f)); break;
-       case 7: res = cos_f05(rev - Pi2); break;
-       default: rev = fmod_f(rev, Pi2);  res = cos_f(rev);
+    else rev = value_rad;
+    do {
+        nix = (int32_t) (rev * 1.27323949337f);
+        if (nix > 7) rev = fmod_f(rev, Pi2);
+    } while (nix > 7);
+    switch (nix) {
+    case 0: res = cos_f05(rev); break;
+    case 1: res = sin_f05((PI / 2.0f - rev)); break;
+    case 2: res = sin_f05((PI / 2.0f - rev)); break;
+    case 3: res = -1.0f * cos_f05(PI - rev); break;
+    case 4: res = -1.0f * cos_f05(PI - rev); break;
+    case 5: res = sin_f05(rev - (PI + Pi / 2.0f)); break;
+    case 6: res = sin_f05(rev - (PI + Pi / 2.0f)); break;
+    case 7: res = cos_f05(rev - Pi2); break;
+    default: break;
     };
     return res;
 };
 
 
-/// sin input is radian +-2pi, output 1.0:-1.0.
-/// min |x|=1.45534809702e-162 error 2L
+
 double sin_d(double value_rad)
 {
-    double ret, rev, res;
+    double rep, rep_z, ret, rev, fac, fac_i;
     ret = value_rad;
     if (ret < (Pi_d / (-2.0))) ret += Pi_d * 2.0;
     if (ret > (Pi_d * 1.5)) ret -= Pi_d * 2.0;
     else if (ret > (Pi_d / 2.0)) ret = Pi_d - ret;
-    rev = ret * ret;
-    res = rev * 1.0/51090942171709440000.0; // +1/21!
-    res += -1.0/121645100408832000.0; // -1/19!
-    res *= rev; res += 1.0/355687428096000.0; // +1/17
-    res *= rev; res += -1.0/1307674368000.0; // -1/15!
-    res *= rev; res += 1.0/6227020800.0; // +1/13!
-    res *= rev; res += -1.0/39916800.0; // -1/11!
-    res *= rev; res += 1.0/362880.0; // +1/9!
-    res *= rev; res += -1.0/5040.0; // -1/7!
-    res *= rev; res += 1.0/120.0; // +1/5!
-    res *= rev; res += -1.0/6.0; // -1/3!
-    res *= rev; res *= ret; res += ret;
-    return res;
-};
+    rep = ret; rev = rep * rep;
+    fac = 1.0d; fac_i = 2.0d;
+    double exx[26]; int edd = 25;
+    do
+    {
+        ret *= rev; fac *= fac_i++; fac *= -fac_i++;
+        exx[edd] = ret / fac; rep_z = exx[edd]; edd--;
+    }while ((rep_z != 0.0d)&& (edd != 0)); fac = 0.0d;
+    do
+    {
+        edd++;
+        fac += exx[edd];
+    }while (edd != 25);
+    rep += fac;
+    return rep;
+}
+
 
 /// cos input is radian +-2pi, output 1.0:-1.0.
 double cos_d(double value_rad)
@@ -512,7 +567,8 @@ double cos_d(double value_rad)
 float sin__f(float value_rad)
 {
     float ret, rev, res;
-    ret = value_rad; ret *= (Pi/2.0f);
+    ret = value_rad;
+    ret *= (Pi/2.0f);
     if (ret < 0.0f) ret += 4.0f;
     if (ret >= 3.0f) ret -= 4.0f;
     else if (ret > 1.0f) ret -= 2.0f;
@@ -526,39 +582,50 @@ float sin__f(float value_rad)
 
 
 
-/// tab = 1.0f; s = 2.0f;
-/// (tab *= s++; tab *= s++;) x(n) = -1.0f/tab;
-const uint32_t table_const_factorial[14] =
-{
-0xBE2AAAAB, 0x3C088889, 0xB9500D01, 0x3638EF1D, 0xB2D7322B, 0x2F309231, 0xAB573FA0, 0x274A963C, 0xA317A4DB, 0x1EB8DC78,
-0x9A3B0DA0, 0x159F9E66, 0x90E8D58D, 0x0C12CFCB,
-};
 
-/// error 0,0%, 8~14 steps(8-10-12-14)
-/// tan input is radian 0:+2pi, output min:max.
+
+
+/// tan input is radian -pi/2:+pi/2, output min:max.
+/// error (-+pi/2) 1L
 float tan_f(float value_rad)
 {
-    float rep, rep_c, ret, ret_c, rev, rev_c;
-    if (value_rad < 0) value_rad += Pi2;
-    if (value_rad >= (PI+ Pi/2.0f)) rep = value_rad - Pi2;
-        else if (value_rad > Pi/2.0f) rep = PI - value_rad;
-            else rep = value_rad;
-        printo( "  si=", rep );// monitor_print("\n");
-    if (abs_f(rep) >= (Pi/2.0f)) return 1.0e+36;
-    if (value_rad >= PI ) rep_c = (PI+ Pi/2.0f) - value_rad;
-        else rep_c = value_rad - Pi/2.0f;
-    rep_c *=-1.0f; ret = rep; rev = rep * rep;
-    ret_c = rep_c; rev_c = rep_c * rep_c;
-    int32_t nex = 0;
-    float* tab; tab = (float*) table_const_factorial;
-    do
-    {
-        ret *= rev; ret_c *= rev_c;
-        rep += ret * tab[nex];
-        rep_c += ret_c * tab[nex++];
-    }while (nex != 14); rep /= rep_c;
-    return rep;
-}
+    float resin, recos, rev;
+    int32_t nix;
+    rev = value_rad;
+    if( abs_f(rev) > (PI/2.0f)) {
+        rev -= round_f(rev * 0.318309873343f) * PI;
+    };
+    nix = ((int32_t) floor_f(rev * 1.27323949337f)) + 2;
+    switch (nix) {
+    case 0:
+        resin = -1.0 * cos_f05((PI/2.0f + rev));
+        recos = sin_f05((PI/2.0f + rev));
+        break;
+    case 1:
+        resin = sin_f05(rev );
+        recos = cos_f05(rev );
+        break;
+    case 2:
+        resin = sin_f05(rev );
+        recos = cos_f05(rev );
+        break;
+    case 3:
+        resin = cos_f05((PI/2.0f - rev));
+        recos = sin_f05((PI/2.0f - rev));
+        break;
+    default:
+        break;
+    };
+    rev = resin / recos;
+    return rev;
+
+};
+
+
+
+
+
+
 
 /*
 one =  1.0000000000e+00f, // 0x3F800000  [10]
@@ -585,120 +652,150 @@ qS4 =  7.7038154006e-02f; // 0x3d9dc62e  [6]
 */
 
 /// pS5-pS0, qS4-qS1, one, pio2_hi, pio2_lo, pio4_hi, pio2_hic, pio2_loc
-const uint32_t table_const_asin_acos[16]={
-0x3811ef08,0x3a4f7f04,0xbd241146,0x3e4e0aa8,0xbea6b090,0x3e2aaaab,0x3d9dc62e,0xbf303361,0x4001572d,0xc019d139,
-0x3F800000,0x3fc90fdb, 0xb33bbd2f, 0x3f490fdb, 0x3fc90fda, 0x33a22168,
+const uint32_t table_const_asin_acos[16]= {
+    0x3811ef08,0x3a4f7f04,0xbd241146,0x3e4e0aa8,0xbea6b090,0x3e2aaaab,0x3d9dc62e,0xbf303361,0x4001572d,0xc019d139,
+    0x3F800000,0x3fc90fdb, 0xb33bbd2f, 0x3f490fdb, 0x3fc90fda, 0x33a22168,
 };
 
 /// in -1.0f:+1.0f, out 0:2pi
 float asin_f(float value)
 {
-	float rep,wer,pif,qif,cem,rem,sem;
-	int_fast8_t sign, nix;
-	float* tab; tab = (float*) table_const_asin_acos;
-	union f__raw asi;
-	asi.f_raw = value; sign = asi.sign;
-	asi.sign = 0;
-	if(asi.i_raw == 0x3F800000)             /// asin(1)=+-pi/2 with inexact
-	    {
-            asi.f_raw = PI/2.0f;
-            asi.sign = sign;
-            return asi.f_raw;
-        }else if(asi.i_raw > 0x3F800000)    /// |value|>= 1
-        {
-            asi.i_raw |= 0x01FF << 22;
-            return asi.f_raw;               /// asin(|value|>1) is NaN
-        }else if (asi.i_raw < 0x3f000000)   /// |value|<0.5
-        {
-            if(asi.i_raw < 0x32000000)      /// if |value| < 7.4505806E-9
-            {
-                return value;               /// return value with inexact if value!=0
-            }else
-            {
-                rep = value*value; nix = 0; pif = 0; qif = 0;
-                do{ pif = (pif + tab[nix++]) * rep; }while (nix != 6);
-                do{ qif = (qif + tab[nix++]) * rep; }while (nix != 10);
-                qif += tab[nix];
-                wer = pif/qif;
-                return value+value*wer;
-            };
-        };                                  /// 1> |value|>= 0.5
-	wer = tab[10] - asi.f_raw;
-	rep = wer * 0.5f; nix = 0; pif = 0; qif = 0;
-    do{ pif = (pif + tab[nix++]) * rep; }while (nix != 6);
-    do{ qif = (qif + tab[nix++]) * rep; }while (nix != 10);
-    qif += tab[nix];
-	sem = sqrt_f(rep);
-	if(asi.i_raw >= 0x3F79999A)             /// if |value| > 0.975
-	    {
-            wer = pif / qif;
-            rep = tab[11] - ((float)2.0 * (sem + sem * wer) - tab[12]);
-        }else
-        {
-            asi.f_raw = sem;
-            asi.i_raw &= 0xfffff000;
-            cem  = (rep - asi.f_raw * asi.f_raw) / (sem + asi.f_raw);
-            rem  = pif / qif;
-            pif  = (float)2.0f * sem * rem - (tab[12] - (float)2.0f * cem);
-            qif  = tab[13] - (float)2.0f * asi.f_raw;
-            rep  = tab[13] - (pif - qif);
+    float rep,wer,pif,qif,cem,rem,sem;
+    int_fast8_t sign, nix;
+    float* tab;
+    tab = (float*) table_const_asin_acos;
+    union f__raw asi;
+    asi.f_raw = value;
+    sign = asi.sign;
+    asi.sign = 0;
+    if(asi.i_raw == 0x3F800000) {           /// asin(1)=+-pi/2 with inexact
+        asi.f_raw = PI/2.0f;
+        asi.sign = sign;
+        return asi.f_raw;
+    } else if(asi.i_raw > 0x3F800000) {  /// |value|>= 1
+        asi.i_raw |= 0x01FF << 22;
+        return asi.f_raw;               /// asin(|value|>1) is NaN
+    } else if (asi.i_raw < 0x3f000000) { /// |value|<0.5
+        if(asi.i_raw < 0x32000000) {    /// if |value| < 7.4505806E-9
+            return value;               /// return value with inexact if value!=0
+        } else {
+            rep = value*value;
+            nix = 0;
+            pif = 0;
+            qif = 0;
+            do {
+                pif = (pif + tab[nix++]) * rep;
+            } while (nix != 6);
+            do {
+                qif = (qif + tab[nix++]) * rep;
+            } while (nix != 10);
+            qif += tab[nix];
+            wer = pif/qif;
+            return value+value*wer;
         };
-    if(sign != 0) return -rep; else return rep;
+    };                                  /// 1> |value|>= 0.5
+    wer = tab[10] - asi.f_raw;
+    rep = wer * 0.5f;
+    nix = 0;
+    pif = 0;
+    qif = 0;
+    do {
+        pif = (pif + tab[nix++]) * rep;
+    } while (nix != 6);
+    do {
+        qif = (qif + tab[nix++]) * rep;
+    } while (nix != 10);
+    qif += tab[nix];
+    sem = sqrt_f(rep);
+    if(asi.i_raw >= 0x3F79999A) {           /// if |value| > 0.975
+        wer = pif / qif;
+        rep = tab[11] - ((float)2.0 * (sem + sem * wer) - tab[12]);
+    } else {
+        asi.f_raw = sem;
+        asi.i_raw &= 0xfffff000;
+        cem  = (rep - asi.f_raw * asi.f_raw) / (sem + asi.f_raw);
+        rem  = pif / qif;
+        pif  = (float)2.0f * sem * rem - (tab[12] - (float)2.0f * cem);
+        qif  = tab[13] - (float)2.0f * asi.f_raw;
+        rep  = tab[13] - (pif - qif);
+    };
+    if(sign != 0) return -rep;
+    else return rep;
 }
 
 /// in -1.0f:+1.0f, out 0:2pi
 float acos_f(float value)
 {
-	float rep,pif,qif,wer,sem,sif,cif;
+    float rep,pif,qif,wer,sem,sif,cif;
     int_fast8_t sign, nix;
-	float* tab; tab = (float*) table_const_asin_acos;
-	union f__raw aco;
-	aco.f_raw = value; sign = aco.sign;
-	aco.sign = 0;
-	if(aco.i_raw == 0x3f800000)             /// |value|==1
-	    {
-            if(sign == 0) return 0.0;	    /// acos(1) = 0
-                else return PI;	            /// acos(-1)= pi
-        } else if(aco.i_raw > 0x3f800000)   /// |value| >= 1
-        {
-            aco.i_raw = 0x01FF << 22;
-            return aco.f_raw;               /// acos(|value|>1) is NaN
+    float* tab;
+    tab = (float*) table_const_asin_acos;
+    union f__raw aco;
+    aco.f_raw = value;
+    sign = aco.sign;
+    aco.sign = 0;
+    if(aco.i_raw == 0x3f800000) {           /// |value|==1
+        if(sign == 0) return 0.0;	    /// acos(1) = 0
+        else return PI;	            /// acos(-1)= pi
+    } else if(aco.i_raw > 0x3f800000) { /// |value| >= 1
+        aco.i_raw = 0x01FF << 22;
+        return aco.f_raw;               /// acos(|value|>1) is NaN
+    };
+    if(aco.i_raw<0x3f000000) {              /// |value| < 0.5
+        if(aco.i_raw<=0x23000000) {     /// if|value|<2**-57
+            aco.f_raw = PI/2.0f;
+            aco.sign = sign;
+            return aco.f_raw;
         };
-	if(aco.i_raw<0x3f000000)                /// |value| < 0.5
-	    {
-            if(aco.i_raw<=0x23000000)       /// if|value|<2**-57
-            {
-                aco.f_raw = PI/2.0f; aco.sign = sign;
-                return aco.f_raw;
-            };
-            rep = value*value; nix = 0; pif = 0; qif = 0;
-            do{ pif = (pif + tab[nix++]) * rep; }while (nix != 6);
-            do{ qif = (qif + tab[nix++]) * rep; }while (nix != 10);
-            qif += tab[nix]; wer = pif/qif;
-            return tab[14] - (value - (tab[15]-value * wer));
-        } else if (sign != 0)                /// value < -0.5
-        {
-            rep = (tab[10] + value) * 0.5f; nix = 0; pif = 0; qif = 0;
-            do{ pif = (pif + tab[nix++]) * rep; }while (nix != 6);
-            do{ qif = (qif + tab[nix++]) * rep; }while (nix != 10);
-            qif += tab[nix]; wer = pif/qif;
-            sif = sqrt_f(rep);
-            sem = wer*sif - tab[15];
-            return (PI - 2.0 * (sif + sem));
-        } else                              /// value > 0.5
-        {
-            rep = (tab[10] - value ) * 0.5f;
-            sif = sqrt_f(rep);
-            aco.f_raw = sif;
-            aco.i_raw &= 0xfffff000;
-            cif  = (rep-aco.f_raw * aco.f_raw) / (sif + aco.f_raw);
-            nix = 0; pif = 0; qif = 0;
-            do{ pif = (pif + tab[nix++]) * rep; }while (nix != 6);
-            do{ qif = (qif + tab[nix++]) * rep; }while (nix != 10);
-            qif += tab[nix]; wer = pif/qif;
-            sem = wer * sif + cif;
-            return (2.0f * (aco.f_raw + sem));
-        };
+        rep = value*value;
+        nix = 0;
+        pif = 0;
+        qif = 0;
+        do {
+            pif = (pif + tab[nix++]) * rep;
+        } while (nix != 6);
+        do {
+            qif = (qif + tab[nix++]) * rep;
+        } while (nix != 10);
+        qif += tab[nix];
+        wer = pif/qif;
+        return tab[14] - (value - (tab[15]-value * wer));
+    } else if (sign != 0) {              /// value < -0.5
+        rep = (tab[10] + value) * 0.5f;
+        nix = 0;
+        pif = 0;
+        qif = 0;
+        do {
+            pif = (pif + tab[nix++]) * rep;
+        } while (nix != 6);
+        do {
+            qif = (qif + tab[nix++]) * rep;
+        } while (nix != 10);
+        qif += tab[nix];
+        wer = pif/qif;
+        sif = sqrt_f(rep);
+        sem = wer*sif - tab[15];
+        return (PI - 2.0 * (sif + sem));
+    } else {                            /// value > 0.5
+        rep = (tab[10] - value ) * 0.5f;
+        sif = sqrt_f(rep);
+        aco.f_raw = sif;
+        aco.i_raw &= 0xfffff000;
+        cif  = (rep-aco.f_raw * aco.f_raw) / (sif + aco.f_raw);
+        nix = 0;
+        pif = 0;
+        qif = 0;
+        do {
+            pif = (pif + tab[nix++]) * rep;
+        } while (nix != 6);
+        do {
+            qif = (qif + tab[nix++]) * rep;
+        } while (nix != 10);
+        qif += tab[nix];
+        wer = pif/qif;
+        sem = wer * sif + cif;
+        return (2.0f * (aco.f_raw + sem));
+    };
 }
 
 
@@ -709,22 +806,35 @@ float atan_f(float value)
 {
     float ret, rex, rez;
     float singl, errors;
-    if(value < 0.0f) singl = -1.0f; else singl = 1.0f;
+    if(value < 0.0f) singl = -1.0f;
+    else singl = 1.0f;
     ret = singl * value;
-    if (ret > 16782358.0f){return (1.57079637051f * singl);}
-    else if(ret > 3.28f){errors = 1.57079637051f; ret = -1.0f / ret;}
-    else if(ret > 0.8f){errors = 0.982793807983f; rex = 1.5f * ret + 1.0f; ret -= 1.5f; ret /= rex;}
-    else if(ret > 0.26f){errors = 0.463647603989f; rex = 2.0f * ret - 1.0f; ret += 2.0f; ret = rex / ret;}
-    else if(ret > 7.09616335826e-15f){errors = 0.0f;} else return value;
-    rex = ret * ret;
-    rez = ret * 0.0769230797887f; // 1/13
+    if (ret > 16782358.0f) {
+        return (1.57079637051f * singl);
+    } else if(ret > 3.28f) {
+        errors = 1.57079637051f;
+        ret = -1.0f / ret;
+    } else if(ret > 0.8f) {
+        errors = 0.982793807983f;
+        rex = 1.5f * ret + 1.0f;
+        ret -= 1.5f;
+        ret /= rex;
+    } else if(ret > 0.26f) {
+        errors = 0.463647603989f;
+        rex = 2.0f * ret - 1.0f;
+        ret += 2.0f;
+        ret = rex / ret;
+    } else if(ret > 7.09616335826e-15f) {
+        errors = 0.0f;
+    } else return value;
+    rex = ret * ret; rez = ret * 0.0769230797887f; // 1/13
     rez *= rex; rez += ret * -0.0909090936184f;  // -1/11
     rez *= rex; rez += ret * 0.111111111939;  // 1/9
     rez *= rex; rez += ret * -0.142857149243f;  // -1/7
     rez *= rex; rez += ret * 0.20000000298f;   // 1/5
     rez *= rex; rez += ret * -0.333333343267f;  // -1/3
-    rez *= rex; ret += rez;
-    ret += errors; ret *= singl;
+    rez *= rex; ret += rez; ret += errors;
+    ret *= singl;
     return ret;
 };
 
@@ -756,7 +866,13 @@ float atan2_f(float value_sin, float value_cos)
 #endif
 #define TWOBYPI          0.6366197723675813   //2/pi
 
-
+/// tab = 1.0f; s = 2.0f;
+/// (tab *= s++; tab *= s++;) x(n) = -1.0f/tab;
+const uint32_t table_const_factorial[14] =
+{
+0xBE2AAAAB, 0x3C088889, 0xB9500D01, 0x3638EF1D, 0xB2D7322B, 0x2F309231, 0xAB573FA0, 0x274A963C, 0xA317A4DB, 0x1EB8DC78,
+0x9A3B0DA0, 0x159F9E66, 0x90E8D58D, 0x0C12CFCB,
+};
 
 
 
