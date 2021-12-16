@@ -42,28 +42,28 @@ union divrev
 };
 
 const int16_t data_otner[129] = {
--308,-304,-299,-294,-289,-284,-280,-275,-270,-265,-260,-256,-251,-246,-241,-236,-231,-227,-222,-217,-212,
--207,-203,-198,-193,-188,-183,-178,-174,-169,-164,-159,-154,-150,-145,-140,-135,-130,-125,-121,-116,-111,
--106,-101,-97,-92,-87,-82,-77,-72,-68,-63,-58,-53,-48,-44,-39,-34,-29,-24,-19,-15,-10,
--5,0,5,9,14,19,24,29,33,38,43,48,53,58,62,67,72,77,82,86,91,
-96,101,106,111,115,120,125,130,135,139,144,149,154,159,164,168,173,178,183,188,192,
-197,202,207,212,217,221,226,231,236,241,245,250,255,260,265,269,274,279,284,289,294,
-298,303,308,};
+-308,-303,-298,-293,-289,-284,-279,-274,-269,-264,-260,-255,-250,-245,-240,-236,-231,-226,-221,-216,
+-211,-207,-202,-197,-192,-187,-183,-178,-173,-168,-163,-158,-154,-149,-144,-139,-134,-130,-125,-120,
+-115,-110,-105,-101,-96,-91,-86,-81,-77,-72,-67,-62,-57,-53,-48,-43,-38,-33,-28,-24,
+-19,-14,-9,-4,0,5,10,15,20,25,29,34,39,44,49,53,58,63,68,73,
+78,82,87,92,97,102,106,111,116,121,126,131,135,140,145,150,155,159,164,169,
+174,179,183,188,193,198,203,208,212,217,222,227,232,236,241,246,251,256,261,265,
+270,275,280,285,289,294,299,304,309,};
 
 const uint32_t data_of10raw[129] = {
-222507385,1458224403,955661945,626302612,410453680,268994923,1762885132,1155324400,757153399,496208051,
-325194908,2131197353,1396701497,915342293,599878725,393136521,257645950,1688508503,1106580932,725208879,
-475272891,311474842,2041281525,1337774260,876723739,574569669,376549978,246775794,1617269844,1059893965,
-694612109,455220991,298333629,1955159272,1281333180,839734513,550328410,360663227,236364252,1549036765,
-1015176734,665306225,436015087,285746847,1872670541,1227273366,804305873,527109897,345446742,226391976,
-1483682460,972346137,637236764,417619485,273691106,1793662034,1175494350,770371977,504870979,330872245,
-216840434,1421085471,931322574,610351562,400000000,262144000,1717986918,1125899906,737869762,483570327,
-316912650,2076918743,1361129467,892029807,584600654,383123885,251084069,1645504557,1078397866,706738825,
-463168356,303542014,1989292945,1303703024,854394814,559936185,366959778,240490760,1576080247,1032899951,
-676921312,443627151,290735489,1905364105,1248699420,818347651,536312317,351477640,230344386,1509584969,
-989321605,648361807,424910394,278469275,1824976247,1196016433,783821329,513685146,336648697,220626090,
-1445895146,947581843,621007236,406983302,266720577,1747979975,1145556156,750751682,492012622,322445392,
-2113178124,1384892415,907603093,594806763,389812560,255467559,1674232198,1097224813,719077253,};
+2225073858,1458224403,955661945,626302612,4104536801,2689949238,1762885132,1155324400,757153399,496208051,
+3251949087,2131197353,1396701497,915342293,599878725,3931365215,2576459507,1688508503,1106580932,725208879,
+475272891,3114748422,2041281525,1337774260,876723739,574569669,3765499789,2467757941,1617269844,1059893965,
+694612109,455220991,2983336292,1955159272,1281333180,839734513,550328410,3606632272,2363642526,1549036765,
+1015176734,665306225,436015087,2857468478,1872670541,1227273366,804305873,527109897,3454467422,2263919769,
+1483682460,972346137,637236764,4176194859,2736911063,1793662034,1175494350,770371977,504870979,3308722450,
+2168404344,1421085471,931322574,610351562,4000000000,2621440000,1717986918,1125899906,737869762,483570327,
+3169126500,2076918743,1361129467,892029807,584600654,3831238852,2510840694,1645504557,1078397866,706738825,
+463168356,3035420144,1989292945,1303703024,854394814,559936185,3669597785,2404907604,1576080247,1032899951,
+676921312,443627151,2907354897,1905364105,1248699420,818347651,536312317,3514776401,2303443862,1509584969,
+989321605,648361807,4249103942,2784692759,1824976247,1196016433,783821329,513685146,3366486976,2206260905,
+1445895146,947581843,621007236,4069833027,2667205773,1747979975,1145556156,750751682,492012622,3224453925,
+2113178124,1384892415,907603093,594806763,3898125604,2554675596,1674232198,1097224813,719077253,};
 
 
 
@@ -71,32 +71,34 @@ const char txt_NaN[] = "NaN";
 char* floating_char(uint32_t massa, uint32_t of10raw, int32_t feeze, int32_t order10, char* txt);
 
 
-__attribute__ ((optimize("-Os"))) char* hex_char(uint32_t value, char* tail_txt)  /// 60  байт
+__attribute__ ((optimize("-O1"))) char* hex_char(char* tail_txt, uint32_t value)//48
 {
     int32_t tmp, jump; jump = 0;
-    *(tail_txt--) = 0;
+    *tail_txt = 0;
     do{
         tmp = value & 0x0F;
-        if (tmp > 9 ) *(tail_txt--) = tmp + 55;
-            else *(tail_txt--) = tmp + '0';
-        value >>= 4; jump++;
+        if (tmp > 9 ) tmp += 0x37; else tmp += 0x30;
+        *(--tail_txt) = tmp;
+        jump += 7;
+        value >>= 4;
     }while ((value )||(jump & 1));
-    *(volatile char*)tail_txt-- = 'x';
-    *(volatile char*)tail_txt = '0';
+    *(volatile char*)--tail_txt = 'x';
+    *(volatile char*)--tail_txt = '0';
     return tail_txt;
 };
 
-__attribute__ ((optimize("-Os"))) char * i32_char(int32_t value, char* tail_txt)  /// 32  байт
+__attribute__ ((optimize("-Os"))) char * i32_char(char* tail_txt, int32_t value)//32
 {
     if (value < 0){
         value = 0 - value;
-        tail_txt = u32_char(value, tail_txt);
+        tail_txt = u32_char(tail_txt, value);
         *(--tail_txt) = '-';
-    }else tail_txt = u32_char(value, tail_txt);
+    }else tail_txt = u32_char(tail_txt, value);
     return tail_txt;
 };
 
-__attribute__ ((optimize("-Os"))) char* u32_char (uint32_t value, char* tail_txt) /// 40 байт
+
+__attribute__ ((optimize("-Os"))) char* u32_char (char* tail_txt, uint32_t value)//40
 {
     *tail_txt = 0;
     uint32_t res, tmp;
@@ -106,21 +108,23 @@ __attribute__ ((optimize("-Os"))) char* u32_char (uint32_t value, char* tail_txt
         value = tmp >> 3;
         res -= value * 10;
         *(--tail_txt) = res;
-    }while (value);
+    }while (value > 0);
     return tail_txt;
 };
 
-__attribute__ ((optimize("-Os"))) char* i64_char(int64_t value, char* tail_txt)
+__attribute__ ((optimize("-Os"))) char* i64_char(char* tail_txt, int64_t value)//32
 {
-    if (value < 0){
+    if (value >= 0) tail_txt = u64_char(tail_txt, value);
+    else
+    {
         value = 0 - value;
-        tail_txt = u64_char(value, tail_txt);
+        tail_txt = u64_char(tail_txt, value);
         *(--tail_txt) = '-';
-    }else tail_txt = u64_char(value, tail_txt);
+    };
     return tail_txt;
 };
 
-__attribute__ ((optimize("-Os")))char* u64_char (uint64_t value, char* tail_txt) /// 112 байт
+__attribute__ ((optimize("-Os")))char* u64_char (char* tail_txt, uint64_t value)//104
 {
     uint32_t res, t10, mag;
     union divrev rev;
@@ -155,10 +159,11 @@ __attribute__ ((optimize("-Os")))char* u64_char (uint64_t value, char* tail_txt)
     return tail_txt;
 };
 
-__attribute__ ((optimize("-Os"))) void compress_char(char* tex_in, char* tex_out) /// 60  байт
+
+__attribute__ ((optimize("-Os"))) void compress_char(char* tex_in, char* tex_out)//68
 {
     int32_t ovr;
-    ovr =  (tex_out - tex_in) - OUT_TXT_SIZE_FLOATING;
+    ovr =  (int32_t)(tex_out - tex_in) - OUT_TXT_SIZE_FLOATING;
     if (ovr > 0)
     {
         ovr +=2;
@@ -168,16 +173,18 @@ __attribute__ ((optimize("-Os"))) void compress_char(char* tex_in, char* tex_out
             *(tex_in + (OUT_TXT_SIZE_FLOATING - 1)) = ovr + '0';
         }else
         {
-            ovr++;
+            ovr++; uint32_t tmp;
             *(tex_in + (OUT_TXT_SIZE_FLOATING - 3)) = 'E';
-            *(tex_in + (OUT_TXT_SIZE_FLOATING - 2)) = (ovr / 10) + '0';
-            *(tex_in + (OUT_TXT_SIZE_FLOATING - 1)) = (ovr % 10) + '0';
+            tmp = ((uint64_t) ovr * 0x1999999A >> 32);
+            *(tex_in + (OUT_TXT_SIZE_FLOATING - 2)) = tmp + '0';
+            *(tex_in + (OUT_TXT_SIZE_FLOATING - 1)) = ovr + '0'- tmp * 10;
         };
         *(tex_in + OUT_TXT_SIZE_FLOATING) = 0;
     };
 };
 
-__attribute__ ((optimize("-Os"))) char* float_char(float value, char* text) /// 200 байт
+
+__attribute__ ((optimize("-Os"))) char* float_char(float value, char* text)//168
 {
     union float_raw    ftemp;
     ftemp.f_raw = value;
@@ -216,12 +223,12 @@ __attribute__ ((optimize("-Os"))) char* float_char(float value, char* text) /// 
         ftemp.u_raw <<= 9;
         while (ftemp.sign == 0)
         {
-            of10raw >>= 1; ftemp.u_raw <<= 1;
-            if (of10raw < 214748364)
+            ftemp.u_raw <<= 1;
+            if (of10raw < 858993459)
                 {
-                    order10 -= 1;
-                    of10raw *=10;
-                };
+                    order10--;
+                    of10raw *= 5;
+                }else of10raw >>= 1;
         };
         massa = ftemp.u_raw;
     }else
@@ -234,7 +241,7 @@ __attribute__ ((optimize("-Os"))) char* float_char(float value, char* text) /// 
     return text;
 };
 
-__attribute__ ((optimize("-Os"))) char* double_char(double value, char* text)    /// 252 байт
+__attribute__ ((optimize("-Os"))) char* double_char(double value, char* text)//204
 {
     union double_raw    dtemp;
     dtemp.d_raw = value;
@@ -272,12 +279,12 @@ __attribute__ ((optimize("-Os"))) char* double_char(double value, char* text)   
         dtemp.u64_raw <<= 12;
         while (dtemp.sign == 0)
         {
-            of10raw >>= 1; dtemp.u64_raw <<= 1;
-            if (of10raw < 214748364)
+            dtemp.u64_raw <<= 1;
+            if (of10raw < 858993459)
                 {
-                    order10 -= 1;
-                    of10raw *=10;
-                };
+                    order10--;
+                    of10raw *= 5;
+                }else of10raw >>= 1;
         };
         massa = dtemp.u_raw[1];
     }else
@@ -291,33 +298,36 @@ __attribute__ ((optimize("-Os"))) char* double_char(double value, char* text)   
     return text;
 };
 
-__attribute__ ((optimize("-Os"))) char* floating_char(uint32_t massa, uint32_t of10raw, int32_t feeze, int32_t order10, char* txt) /// 304 байт
+__attribute__ ((optimize("-Os"))) char* floating_char(uint32_t massa, uint32_t of10raw, int32_t feeze, int32_t order10, char* txt)//264
 {
     if (feeze > 7)
     {
         while ( (feeze++) != 16)
         {
-            of10raw >>= 1;
-            if (of10raw < 214748364)
-                {order10 -= 1; of10raw *=10;};
+            if (of10raw < 858993459)
+                {
+                    order10--;
+                    of10raw *= 5;
+                }else of10raw >>= 1;
         };
     }else
     {
         while ( (feeze--) != 0)
         {
-            of10raw <<= 1;
-            if ((of10raw >> 31) == 1)
-                {order10 += 1;
-                 of10raw = ((uint64_t) of10raw * 3435973837UL >> 35);};
+            if ((of10raw >> 31 ) !=0)
+                {
+                    order10++;
+                    of10raw = ((uint64_t) of10raw * 3435973837UL >> 34);
+                }else of10raw <<= 1;
         };
     };
     massa = ((uint64_t) massa * of10raw >> 32);
     char *mas_s, *mas_f, *ord_s, *ord_f; int32_t tmp, tff;
     mas_f = txt + 12;
-    mas_s = u32_char (massa, mas_f);
+    mas_s = u32_char (mas_f, massa);
 
 
-    tmp = mas_f - mas_s; tmp -= 9;
+    tmp = mas_f - mas_s; tmp -= 10;
     order10 += tmp;
     if ((-12 <= order10)&&(order10 < 15))
     {
@@ -327,7 +337,7 @@ __attribute__ ((optimize("-Os"))) char* floating_char(uint32_t massa, uint32_t o
     if (order10 != 0)
     {
         ord_f = txt + 19;
-        ord_s = i32_char(order10, ord_f);
+        ord_s = i32_char(ord_f, order10);
         *(--ord_s) = 'e';
         tmp = ord_f - ord_s;
     };
@@ -359,41 +369,39 @@ void tabl_grabl(void)
     volatile uint32_t cis3;
     volatile int32_t cis4;
     volatile int32_t cis5;
-    printo("\n\n");
+    printo("\f\n");
 
     cis5 = 2;
-    while (cis5--){
-    if (cis5 == 1)printo("const int16_t data_otner[129] = { \n");
-    if (cis5 == 0)printo("const uint32_t data_of10raw[129] = { \n");
+    while (cis5){
+    if (cis5 == 2)printo("const int16_t data_otner[129] = {\n");
+    if (cis5 == 1)printo("const uint32_t data_of10raw[129] = {\n");
     cis4 = 0;
     for(cis2 = 0; cis2 !=129; cis2++)
     {
         cis = cis2 <<4;
-        of10raw = 858993459200000000;
+        of10raw = 8589934592000000000;
         ofreze = 0;
         if (cis > 1023){
             while ( (cis--) != 1023){
-                of10raw <<= 1;
                 if ((of10raw >> 63 ) !=0){
-                    ofreze += 1; of10raw /=10;};};}
+                    ofreze += 1; of10raw /=5;}
+                else of10raw <<= 1;};}
         else if (cis < 1023){
             while ( (cis++) != 1023){
-                of10raw >>= 1;
-                if (of10raw < 922337200250290176){
-                    ofreze -= 1; of10raw *=10;};};};
+                if (of10raw < 3689348813882916864){
+                    ofreze -= 1; of10raw *=5;}
+                    else of10raw >>= 1;};};
         cis3 = (uint32_t) (of10raw >> 32);
-        if (cis5 == 1){cis4++;if (cis4 > 19) {cis4 = 0; printo("\n");} else; printo(ofreze,",");  };
-        if (cis5 == 0){cis4++;if (cis4 > 9){cis4 = 0;printo("\n");}else printo( cis3,",");};
-    }; printo( "};\n\n");
-    };
+        if (cis5 == 2){cis4++; printo(ofreze,","); if(cis4 > 19){cis4 = 0; printo("\n");};};
+        if (cis5 == 1){cis4++; printo( cis3,","); if(cis4 > 9){cis4 = 0; printo("\n");};};
+    }; printo("};\n\n");
+    cis5--;};
 };
 **/
 
 ///-------------------------
 /**
-printo ("\f");
-printo("\n 16777216.0f         = ",16777216.0f);
-printo("\n -16777216.0f        = ",-16777216.0f);
+printo("\f");
 printo("\n 5.64231125e+5f = ", 5.64231125e+5f);
 printo("\n -8.65399996416e+12f = ", -8.65399996416e+12f);
 printo("\n 9.99999949672e+20f  = ", 9.99999949672e+20f);
@@ -419,117 +427,120 @@ printo("\n 3.243552454547e+66d = ", 3.243552454547e+66d);
 printo("\n 7.345624524111e+24d = ", 7.345624524111e+24d);
 printo("\n 1.2345678912345678d = ", 1.2345678912345678d);
 
+printo("\n -4567891234567891234          =", -4567891234567891234LL);
+printo("\n -456789123456789123           =", -456789123456789123LL);
+printo("\n -45678912345678912            =", -45678912345678912LL);
+printo("\n -4567891234567891             =", -4567891234567891LL);
+printo("\n -456789123456789              =", -456789123456789LL);
+printo("\n -45678912345678               =", -45678912345678LL);
+printo("\n -4567891234567                =", -4567891234567LL);
+printo("\n -456789123456                 =", -456789123456LL);
+printo("\n -45678912345                  =", -45678912345LL);
+printo("\n -4567891234                   =", -4567891234LL);
+printo("\n -456789123                    =", -456789123L);
+printo("\n -45678912                     =", -45678912L);
+printo("\n -4567891                      =", -4567891L);
+printo("\n -456789                       =", -456789L);
+printo("\n -45678                        =", -45678L);
+printo("\n -4567                         =", -4567L);
+printo("\n -456                          =", -456L);
+printo("\n -45                           =", -45L);
+printo("\n -4                            =", -4L);
+printo("\n 0                             =", 0L);
 
-printo("\n 4567891234567891234 =  ", 4567891234567891234ULL);
-printo("\n -4567891234567891234 = ", -4567891234567891234LL);
-printo("\n -456789123456789123 =  ", -456789123456789123LL);
-printo("\n -45678912345678912 =   ", -45678912345678912LL);
-printo("\n -4567891234567891 =    ", -4567891234567891LL);
-printo("\n -456789123456789 =     ", -456789123456789LL);
-printo("\n -45678912345678 =      ", -45678912345678LL);
-printo("\n -4567891234567 =       ", -4567891234567LL);
-printo("\n -456789123456 =        ", -456789123456LL);
-printo("\n -45678912345 =         ", -45678912345LL);
-printo("\n -4567891234 =          ", -4567891234LL);
-printo("\n -456789123 =           ", -456789123L);
-printo("\n -45678912 =            ", -45678912L);
-printo("\n -4567891 =             ", -4567891L);
-printo("\n -456789 =              ", -456789L);
-printo("\n -45678 =               ", -45678L);
-printo("\n -4567 =                ", -4567L);
-printo("\n -456 =                 ", -456L);
-printo("\n -45 =                  ", -45L);
-printo("\n -4 =                   ", -4L);
+printo("\n 18446744073709551614          =", 18446744073709551614ULL);
+printo("\n 1844674407370955161           =", 1844674407370955161ULL);
+printo("\n 184467440737095516            =", 184467440737095516ULL);
+printo("\n 18446744073709551             =", 18446744073709551ULL);
+printo("\n 1844674407370955              =", 1844674407370955ULL);
+printo("\n 184467440737095               =", 184467440737095ULL);
+printo("\n 18446744073709                =", 18446744073709ULL);
+printo("\n 1844674407370                 =", 1844674407370ULL);
+printo("\n 184467440737                  =", 184467440737ULL);
+printo("\n 18446744073                   =", 18446744073ULL);
+printo("\n 1844674407                    =", 1844674407ULL);
+printo("\n 184467440                     =", 184467440ULL);
+printo("\n 18446744                      =", 18446744ULL);
+printo("\n 1844674                       =", 1844674ULL);
+printo("\n 184467                        =", 184467ULL);
+printo("\n 18446                         =", 18446UL);
+printo("\n 1844                          =", 1844UL);
+printo("\n 184                           =", 184UL);
+printo("\n 18                            =", 18UL);
+printo("\n 1                             =", 1UL);
+printo("\n 0                             =", 0UL);
 
 
 
-printo("\n 18446744073709551614 = ", 18446744073709551614ULL);
-printo("\n 456789123456789123 =   ", 456789123456789123ULL);
-printo("\n 45678912345678912 =    ", 45678912345678912ULL);
-printo("\n 4567891234567891 =     ", 4567891234567891ULL);
-printo("\n 456789123456789 =      ", 456789123456789ULL);
-printo("\n 45678912345678 =       ", 45678912345678ULL);
-printo("\n 4567891234567 =        ", 4567891234567ULL);
-printo("\n 456789123456 =         ", 456789123456ULL);
-printo("\n 45678912345 =          ", 45678912345ULL);
-printo("\n 4567891234 =           ", 4567891234ULL);
-printo("\n 4294967295 =           ", 4294967295UL);
-printo("\n 429496729 =            ", 429496729UL);
-printo("\n 42949672 =             ", 42949672UL);
-printo("\n 4294967 =              ", 4294967UL);
-printo("\n 429496 =               ", 429496UL);
-printo("\n 42949 =                ", 42949UL);
-printo("\n 4294 =                 ", 4294UL);
-printo("\n 42 =                   ", 42UL,"\n");
-
-char ntst_texx[] = "helou words";
-printo(ntst_texx, "\n");
-printo("test tekst \n");
-volatile uint16_t *teat_adress = 55;
-printo("\n uint16_t *teat_adress = ", teat_adress);
-printo("\n uint16_t &teat_adress = ", &teat_adress);
+char* ntst_texx = "helou words";
+printo("\n char helou words              =", ntst_texx);
+printo("\n test tekst");
+uint16_t *teat_adress; teat_adress = ntst_texx;
+*teat_adress = 5555;
+printo("\n uint16_t *teat_adress         =", teat_adress);
+printo("\n uint16_t *teat_adress         =", *teat_adress);
+printo("\n uint16_t &teat_adress         =", &teat_adress);
 volatile int64_t i64temp1 = -9223372036854775808;
-printo("\n int64_t -9223372036854775808 = ", i64temp1);
+printo("\n int64_t -9223372036854775808  =", i64temp1);
 i64temp1 = -1;
-printo("\n int64_t -1                   = ", i64temp1);
+printo("\n int64_t -1                    =", i64temp1);
 i64temp1 = 9223372036854775807;
-printo("\n int64_t 9223372036854775807 = ", i64temp1);
+printo("\n int64_t 9223372036854775807   =", i64temp1);
 i64temp1 = 2;
-printo("\n int64_t 2                   = ", i64temp1);
+printo("\n int64_t 2                     =", i64temp1);
 i64temp1 = 0;
-printo("\n int64_t 0                   = ", i64temp1);
+printo("\n int64_t 0                     =", i64temp1);
 
 volatile int32_t i32temp2 = -1;
-printo("\n int32_t -1           = ", i32temp2);
+printo("\n int32_t -1                    =", i32temp2);
 i32temp2 = 1;
-printo("\n int32_t 1            = ", i32temp2);
+printo("\n int32_t 1                     =", i32temp2);
 i32temp2 = -2147483648;
-printo("\n int32_t -2147483648  = ", i32temp2);
+printo("\n int32_t -2147483648           =", i32temp2);
 i32temp2 = -1;
-printo("\n int32_t i32temp2     = ", i32temp2);
+printo("\n int32_t i32temp2              =", i32temp2);
 i32temp2 = 0;
-printo("\n int32_t 0            = ", i32temp2);
+printo("\n int32_t 0                     =", i32temp2);
 
 
 volatile int16_t ui8temp3 = -32768;
-printo("\n int16_t -32768   = ", ui8temp3);
+printo("\n int16_t -32768                =", ui8temp3);
 ui8temp3 = -1;
-printo("\n int16_t -1       = ", ui8temp3);
+printo("\n int16_t -1                    =", ui8temp3);
 ui8temp3 = 0;
-printo("\n int16_t 0        = ", ui8temp3);
+printo("\n int16_t 0                     =", ui8temp3);
 ui8temp3 = 1;
-printo("\n int16_t 1        = ", ui8temp3);
+printo("\n int16_t 1                     =", ui8temp3);
 ui8temp3 = 32767;
-printo("\n int16_t 32767    = ", ui8temp3);
+printo("\n int16_t 32767                 =", ui8temp3);
 
 volatile uint8_t ui8tegg = 0;
-printo("\n uint8_t 0    = ", ui8tegg);
+printo("\n uint8_t 0                     =", ui8tegg);
 ui8tegg = 1;
-printo("\n uint8_t 1    = ", ui8tegg);
+printo("\n uint8_t 1                     =", ui8tegg);
 ui8tegg = 255;
-printo("\n uint8_t 255  = ", ui8tegg);
+printo("\n uint8_t 255                   =", ui8tegg);
 
 volatile uint16_t ui16tegg = 0;
-printo("\n uint16_t 0    = ", ui16tegg);
+printo("\n uint16_t 0                    =", ui16tegg);
 ui16tegg = 1;
-printo("\n uint16_t 1    = ", ui16tegg);
+printo("\n uint16_t 1                    =", ui16tegg);
 ui16tegg = 65535;
-printo("\n uint16_t 65535= ", ui16tegg);
+printo("\n uint16_t 65535                =", ui16tegg);
 
 volatile uint32_t ui32tegghd = 0;
-printo("\n uint32_t 0            = ", ui32tegghd);
+printo("\n uint32_t 0                    =", ui32tegghd);
 ui32tegghd = 1;
-printo("\n uint32_t 1            = ", ui32tegghd);
+printo("\n uint32_t 1                    =", ui32tegghd);
 ui32tegghd = 4294967295;
-printo("\n uint32_t 4294967295   = ", ui32tegghd);
+printo("\n uint32_t 4294967295           =", ui32tegghd);
 
 volatile uint64_t ui64temp4 = 0;
-printo("\n uint64_t 0                     = ", ui64temp4);
+printo("\n uint64_t 0                    =", ui64temp4);
 ui64temp4 = 18446744073709551614;
-printo("\n uint64_t 18446744073709551614  = ", ui64temp4);
+printo("\n uint64_t 18446744073709551614 =", ui64temp4);
 ui64temp4 = 1;
-printo("\n uint64_t 1                     = ", ui64temp4);
-
+printo("\n uint64_t 1                    =", ui64temp4);
 
 **/
 

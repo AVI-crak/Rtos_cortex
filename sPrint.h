@@ -1,50 +1,46 @@
 /// sPrint.h
-/// РїРµС‡Р°С‚СЊ Р±РµР· СѓРєР°Р·Р°РЅРёСЏ С‚РёРїР° РїР°СЂР°РјРµС‚СЂР°, РІ СЂР°Р·РЅРѕР±РѕР№
-/// Р±РµР· Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№ РѕС‚ РІРЅРµС€РЅРёС… Р±РёР±Р»РёРѕС‚РµРє
-/// printo("С‚РµРєСЃС‚", double / float / uint(8-32-64)_t / int(8-32-64)_t )
-/// СЂР°Р·РјРµСЂ - 1907 Р±Р°Р№С‚ РїСЂРё Р°РіСЂРµСЃСЃРёРІРЅРѕР№ РѕРїС‚РёРјРёР·Р°С†РёРё
-/// РЅР° РІРєСѓСЃ Рё С†РІРµС‚... РґРѕР±Р°РІРёС‚СЊ СЃРѕР±СЃС‚РІРµРЅРЅСѓСЋ С„СѓРЅРєС†РёСЋ РїРµС‡Р°С‚Рё РІ
+/// печать без указания типа параметра, в разнобой
+/// без зависимостей от внешних библиотек
+/// printo("текст", double / float / uint(8-16-32-64)_t / int(8-16-32-64)_t )
+/// размер - 1907 байт при агрессивной оптимизации
+/// на вкус и цвет... добавить собственную функцию печати в
 /// soft_print()
-
 
 #ifndef _sPrinto_
 
 #include <stdint.h>
 
-#include "monitor.h" /// РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ С„СѓРЅРєС†РёСЏ РїРµС‡Р°С‚Рё monitor_print(txt)
-/// РєРѕР»РёС‡РµСЃС‚РІРѕ  9-20
-#define OUT_TXT_SIZE_FLOATING   10
+#include "monitor.h" /// используется функция печати monitor_print(txt)
+/// количество  9-20
+#define OUT_TXT_SIZE_FLOATING  20
 
 
 static void soft_print(char* txt){ monitor_print(txt);};
 
 
 
-
-char* i32_char(int32_t value, char* text);
-char* u32_char(uint32_t value, char* text);
-char* u64_char(uint64_t value, char* text);
-char* i64_char(int64_t value, char* text);
+char* i32_char(char* tail_txt, int32_t value);
+char* u32_char(char* tail_txt, uint32_t value);
+char* u64_char(char* tail_txt, uint64_t value);
+char* i64_char(char* tail_txt, int64_t value);
 char* float_char(float value, char* text);
 char* double_char(double value, char* text);
-char* nex_char(uint32_t value, char* text);
-
+char* hex_char(char* tail_txt, uint32_t value);
 void compress_char(char* tex_in, char* tex_out);
 
 
-
 static inline void soft_print_con(const char* txt){soft_print((char*)txt);};
-static inline void print_uint8(uint8_t value){char print_buf8[8]; soft_print(u32_char(value,&print_buf8[7]));};
-static inline void print_uint16(uint16_t value){char print_buf8[8]; soft_print(u32_char(value,&print_buf8[7]));};
-static inline void print_uint32(uint32_t value){char print_buf12[12]; char* dot3u; dot3u = u32_char(value,&print_buf12[11]); compress_char(dot3u,&print_buf12[11]); soft_print(dot3u);};
-static inline void print_uint64(uint64_t value){char print_buf24[24]; char* dot6u; dot6u = u64_char(value,&print_buf24[23]); compress_char(dot6u,&print_buf24[23]); soft_print(dot6u);};
-static inline void print_int8(int8_t value){char print_buf8[8]; soft_print(i32_char(value,&print_buf8[7]));};
-static inline void print_int16(int16_t value){char print_buf8[8]; soft_print(i32_char(value,&print_buf8[7]));};
-static inline void print_int32(int32_t value){char print_buf12[12]; char* doti3; doti3 = i32_char(value,&print_buf12[11]); compress_char(doti3,&print_buf12[11]); soft_print(doti3);};
-static inline void print_int64(int64_t value){char print_buf24[24]; char* dot6i; dot6i = i64_char(value,&print_buf24[23]); compress_char(dot6i,&print_buf24[23]); soft_print(dot6i);};
+static inline void print_uint8(uint8_t value){char print_buf8[8]; soft_print(u32_char(&print_buf8[7],value));};
+static inline void print_uint16(uint16_t value){char print_buf8[8]; soft_print(u32_char(&print_buf8[7],value));};
+static inline void print_uint32(uint32_t value){char print_buf12[12]; char* dot3u; dot3u = u32_char(&print_buf12[11],value); compress_char(dot3u,&print_buf12[11]); soft_print(dot3u);};
+static inline void print_uint64(uint64_t value){char print_buf24[24]; char* dot6u; dot6u = u64_char(&print_buf24[23],value); compress_char(dot6u,&print_buf24[23]); soft_print(dot6u);};
+static inline void print_int8(int8_t value){char print_buf8[8]; soft_print(i32_char(&print_buf8[7],value));};
+static inline void print_int16(int16_t value){char print_buf8[8]; soft_print(i32_char(&print_buf8[7],value));};
+static inline void print_int32(int32_t value){char print_buf12[12]; char* doti3; doti3 = i32_char(&print_buf12[11],value); compress_char(doti3,&print_buf12[11]); soft_print(doti3);};
+static inline void print_int64(int64_t value){char print_buf24[24]; char* dot6i; dot6i = i64_char(&print_buf24[23],value); compress_char(dot6i,&print_buf24[23]); soft_print(dot6i);};
 static inline void print_float(float value){char print_buf_f[20]; soft_print(float_char(value, &print_buf_f[0]));};
 static inline void print_double(double value){char print_buf_d[20]; soft_print(double_char(value, &print_buf_d[0]));};
-static inline void print_nex(uint32_t value){char print_buf_nex[12]; soft_print(nex_char(value, &print_buf_nex[11]));};
+static inline void print_hex(uint32_t value){char print_buf_hex[12]; soft_print(hex_char(&print_buf_hex[11],value));};
 
 #endif
 #define _sPrinto_
@@ -65,7 +61,7 @@ static inline void print_nex(uint32_t value){char print_buf_nex[12]; soft_print(
     int64_t:            print_int64,    \
     float:              print_float,    \
     double:             print_double,   \
-    default:            print_nex       \
+    default:            print_hex       \
 )(X)
 
 #ifndef CONCAT
@@ -105,6 +101,7 @@ static inline void dpr(int32_t obj)  { print_int32(obj); };
 static inline void dpr(int64_t obj)  { print_int64(obj); };
 static inline void dpr(float obj)    { print_float(obj); };
 static inline void dpr(double obj)   { print_double(obj); };
+static inline void dpr(void obj)     { print_hex(obj); };
 
 template <typename T, typename ... Tail> void dpr(const T& obj, const Tail& ... tail) { dpr(obj); dpr(tail ...); }
 template<typename ... T> void printo(const T& ... obj) { dpr(obj ...);  }
