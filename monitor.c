@@ -1,8 +1,8 @@
 /**
  @file    monitor.c
  @author  AVI-crak
- @version V-51%
- @date    25-января-2017
+ @version V-52%
+ @date    2021:11:21
  @brief   Аxis sRtoS, Cortex-M7 ARM GCC EmBitz
 
  license
@@ -23,19 +23,28 @@
 /// os_pass() - Command for OS, task forced switching
 /// os_data.system_us - System time, step 1ms
 
- char    _std_out_buffer[eb_buf_zize_out] __attribute__ ((aligned (4)));
- char    _std_in_buffer[eb_buf_zize_in] __attribute__ ((aligned (4)));
+#if (!((eb_buf_zize_out < 257) && (eb_buf_zize_out & (eb_buf_zize_out - 1)) == 0))
+#error "eb_buf_zize_out!! 256,128,64,32,16,8,4"
+#endif
 
-static struct _stdout
+#if (!((eb_buf_zize_in < 257) && (eb_buf_zize_in & (eb_buf_zize_in - 1)) == 0))
+#error "eb_buf_zize_in!! 256,128,64,32,16,8,4"
+#endif
+
+
+ char    _std_out_buffer[eb_buf_zize_out] __attribute__ ((aligned (4),used));
+ char    _std_in_buffer[eb_buf_zize_in] __attribute__ ((aligned (4),used));
+
+__attribute__ ((aligned (4),used))static struct _stdout
 {
     const uint16_t              length;
     const volatile uint16_t     tail;
     volatile uint16_t           head;
     volatile uint16_t           mode;
-    volatile char               *ptr;
+    char                        *ptr;
 }_eb_monitor_stdout ={eb_buf_zize_out,0,0,0,&_std_out_buffer[0]};
 
-static struct _stdin
+__attribute__ ((aligned (4),used))static struct _stdin
 {
     const uint16_t              length;
     volatile uint16_t           tail;
@@ -44,93 +53,62 @@ static struct _stdin
     const volatile char         *ptr;
 }_eb_monitor_stdin ={eb_buf_zize_in,0,0,0,&_std_in_buffer[0]};
 
-__attribute__( ( always_inline ) ) static inline void delay( uint32_t volatile time_tmp){do {time_tmp--;} while ( time_tmp );};
+static inline void delay( uint32_t volatile time_tmp){while ( --time_tmp );};
+
 
 /// print text to OS
-void monitor_print (char* text)
+void M_print_OS  (char* text)//136
 {
-    static uint8_t status = 0;
-    if ( (text[0] == '\0') || (status == 2) ) return;
-    while (status == 1)os_pass(); /// busy there
-    status = 1;
-    char* in_txt;
-    uint_fast16_t temp_h, temp_t;
-    int32_t temp_tim;
-    temp_tim = os_data.system_us + 2000;
-    temp_tim = 0 - temp_tim;
-    temp_h = _eb_monitor_stdout.head + 1;
-    if (temp_h == eb_buf_zize_out) temp_h = 0;
-    temp_t = _eb_monitor_stdout.tail;
-    in_txt = text;
-    while (*in_txt != '\0')
+    if (*text == 0)return;
+    if(_eb_monitor_stdout.mode == 2) return;
+    while (_eb_monitor_stdout.mode != 0)os_pass(); /// busy there
+    _eb_monitor_stdout.mode = 1;
+    asm volatile ("dsb st":::"memory");
+    int32_t temp_tim; uint32_t temp_h;
+    temp_tim =  os_data.system_us + 2000;
+    temp_tim =  1 - temp_tim;
+    char  *out_txt;
+    out_txt = &_eb_monitor_stdout.ptr[0];
+    temp_h = _eb_monitor_stdout.head;
+    temp_h = (temp_h + 1) & (eb_buf_zize_out - 1);
+    while (*text != 0)
     {
-        do{ temp_t = _eb_monitor_stdout.tail; delay(50);}
-            while (temp_t != _eb_monitor_stdout.tail);
-
-        if (temp_h == temp_t)
+        if (temp_h != _eb_monitor_stdout.tail)
         {
-            if ((os_data.system_us + temp_tim) > 1)
-            {
-                status = 2; return;
-            }else os_pass(); /// busy there
-        }else
-        {
-            _eb_monitor_stdout.ptr[temp_h] = *in_txt++;
-            _eb_monitor_stdout.head = temp_h; temp_h++;
-            if (temp_h == eb_buf_zize_out) temp_h = 0;
-
-            __DSB();
-        };
+            out_txt[temp_h] = *(text++);
+            asm volatile ("dsb st":::"memory");
+            _eb_monitor_stdout.head = temp_h;
+            temp_h = (temp_h + 1) & (eb_buf_zize_out - 1);
+        }else if ((os_data.system_us + temp_tim) < 1) os_pass();
+        else {_eb_monitor_stdout.mode = 2; return;}
     };
-    status = 0;
+    _eb_monitor_stdout.mode = 0;
 };
 
-/// print text
-void monitor_print2(char* text) {
-  static uint8_t status = 0;
-  if (status != 0)
-    return;
-  uint32_t temp_h;
-  int32_t temp_tim;
-  char* in_txt; in_txt = text;
-  temp_tim = 200000;  // anti-stick / time
-  temp_h = _eb_monitor_stdout.head + 1;
-  if (temp_h == eb_buf_zize_out) temp_h = 0;
-#if (eb_buf_zize_out > 256)  // anti-uneven reading
-  volatile uint32_t temp_t;
-  while (*in_txt != 0) {
-    do {
-      temp_t = _eb_monitor_stdout.tail;
-      delay(75);
-    } while ((temp_t != _eb_monitor_stdout.tail) ||
-             ((temp_h == temp_t) && (temp_tim--)));
-#else
-  while (*in_txt != 0) {
-    while ((temp_h == _eb_monitor_stdout.tail) && (temp_tim--))
-      delay(75);
-#endif
-    if (temp_tim == 0) {
-      status = 1;
-      return;
-    };
-    _eb_monitor_stdout.ptr[temp_h] = *(in_txt++);
-    _eb_monitor_stdout.head = temp_h;
-    temp_h++;
-    temp_tim = 200000;
-    if (temp_h == eb_buf_zize_out)
-      temp_h = 0;
-    __DSB();
-  };
+/// print text no os
+void M_print (char* text)
+{
+    uint16_t temp_h; char *out_txt; char txt;
+    out_txt = &_eb_monitor_stdout.ptr[0];
+    temp_h = _eb_monitor_stdout.head;
+    do{
+        temp_h = (temp_h + 1) & (eb_buf_zize_out - 1);
+        txt = *(text++);
+        if(txt == 0) return;
+        while (temp_h == _eb_monitor_stdout.tail);
+        out_txt[temp_h] = txt;
+        asm volatile ("dsb st":::"memory");
+        _eb_monitor_stdout.head = temp_h;
+    }while(1);
 };
 
-uint32_t monitor_balance(void)
+uint32_t M_balance(void)
 {
     uint32_t temp_h, temp_t, out;
-    do{ temp_t = _eb_monitor_stdout.tail; delay(50);}
-        while (temp_t != _eb_monitor_stdout.tail);
+    temp_t = _eb_monitor_stdout.tail;
     temp_h = _eb_monitor_stdout.head;
-    if (temp_h < temp_t) out = temp_t - temp_h - 1;
-        else out = temp_t + eb_buf_zize_out - 1 - temp_h;
+    if ((temp_h < temp_t))out = (temp_t - temp_h) - 1;
+    else out = (eb_buf_zize_out - 1) - (temp_h - temp_t);
     return out;
 };
 

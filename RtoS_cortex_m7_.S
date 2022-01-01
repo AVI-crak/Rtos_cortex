@@ -21,7 +21,7 @@
  .thumb_func
 
 
- .equ   __Test_psp, 0               // checking for stack overflow errors
+ .equ   __Test_psp, 1               // checking for stack overflow errors
  .equ   __SysTick_CTRL, 0xE000E010  // #0xE010 SysTick->CTRL, #0xE014 SysTick->LOAD, #0xE018 SysTick->VAL
 
 
@@ -93,7 +93,6 @@ __switch:    // переключатель задач
             bxeq       lr
 
 
-
 __switch_rxx:    //switch: r0 save, r3<17 r0 move to inactive
  .if  (__Test_psp)
             ldrh       r1, [r0, #26]            // stack area used
@@ -132,7 +131,7 @@ __switch_sawe:    //switch: r0 save, r3 read
             bhi        __switch_read            // r3>17 there the task address
             mov        r4, r3                   //
             ldr        r3, [r0]                 // r3 new active
-            ldr        r1,    [r0, #4]
+            ldr        r1, [r0, #4]
             ldr        r2, [r12, r4]
             str        r1, [r3, #4]
             str        r3, [r1]                 // removed R0 from active
@@ -270,7 +269,6 @@ __to_activ1:
             mov        r2, #0
             strb       r2, [r0, #39]            //  task_activ =0,
             pop        {r1, r2, pc}
-
 
 
 __EnableIRQ:    // ("r0") = IRQn, ("r1") = priority; ++

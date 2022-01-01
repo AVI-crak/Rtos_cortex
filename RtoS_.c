@@ -88,37 +88,25 @@ uint32_t os_resource_free (uint32_t *name_resource)
 
 int32_t os_alarm_ms(int32_t * timer_name, int32_t timer_ms)
 {
-    int32_t tim = os_data.system_us;
-    int32_t tim2 = tim + *timer_name;
-    if ((tim2 >= 1) || ((tim2 + timer_ms) < 0))
-    {
-        *timer_name = 1 - (timer_ms + tim);
-    }else tim2 = 0;
-    return tim2;
-};
+    int32_t systim = 0 - os_data.system_us;
+    int32_t tim = *timer_name - systim;
+    if (tim < 0)*timer_name = systim;
+    if (tim < timer_ms) tim = 0;
+    else *timer_name = systim;
+    return tim;
+}
+
 
 int32_t os_tim_ms(int32_t* timer_name, int32_t timer_ms)
 {
-    int32_t tim = os_data.system_us;
-    int32_t tim2 = tim + *timer_name;
-    if ( tim2 > timer_ms) /// таймер убежал далеко вперёд
-    {
-        *timer_name = 0 - (tim + timer_ms - (tim2 % timer_ms));
-    }else if (tim2 > 0)   /// значение таймера достаточно для выполнения условия
-    {
-        *timer_name = 0 - (timer_ms + tim - tim2);
-    }else if ((timer_ms + tim2) < 0)  /// timer_name установлен на время превышающее timer_mc
-    {
-        *timer_name = 0 - (tim + timer_ms);
-    }else tim2 = 0;
-    return tim2;
+    int32_t systim = os_data.system_us;
+    int32_t tim = *timer_name + systim;
+    if (tim < 0) *timer_name = 0 - systim;
+    if (tim < timer_ms) tim = 0;
+    else if (tim < (timer_ms << 1)) *timer_name = tim - timer_ms - systim;
+    else *timer_name = tim % timer_ms - systim;
+    return tim;
 };
-
-
-
-
-
-
 
 /// Разбудить задачу
 void os_wake(volatile uint8_t* global_task_nomer)
@@ -307,6 +295,14 @@ void os_Run(const uint16_t main_size )
     *rwserv-- = (uint32_t)((void*)service);
     *rwserv = 0x1000000;
 
+#if ((defined (__ARM_ARCH)) && (__ARM_ARCH > 6 ))
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->LAR = 0xC5ACCE55;
+    DWT->LAR = 0xC5ACCE55;
+ //   DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+#endif
+
 #if defined(__STM32F4xx_H) ||  defined(__STM32F7xx_H )
     SCB->CPACR = 0x0F << 20; /// FPU settings
 #endif
@@ -397,7 +393,7 @@ void service (void)
 #if (__Test_psp == 1)
     else
     {
-        if (monitor_balance() > 70)
+        if (M_balance() > 70)
         {
             if (next_t != 0 )
             {
@@ -406,8 +402,7 @@ void service (void)
                 time_log -= os_data.system_us;
             }else if ((os_data.system_us + time_log) > 1)
             {
-                printo("\f");
-                printo("Task_name       ;M  ID; stack;   use;    %; mode\n");
+                printo("\fTask_name       ;M  ID; stack;   use;    %; mode\n");
                 next_t = ( uint32_t)os_data.main_task;
             };
         };

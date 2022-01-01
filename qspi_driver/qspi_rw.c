@@ -123,13 +123,13 @@ __DSB();
 /// The size of the data block is equal to the size of the sector, the address of the sector is direct
 void qspi_sektor_wire (uint8_t* data, uint32_t adress)
 {
-    uint32_t  adres, temp, temp2;
+    uint32_t  adres, temp;// temp2;
     adres = adress & ((~(QSPI_SEKTOR_SIZE - 1)) & 0x0FFFFFFF);
     qspi_reset(); delay(100);
 /// Erasing a single memory sector
     QUADSPI->CCR = _VAL2FLD(QUADSPI_CCR_INSTRUCTION, 0x06)      /// Write Enable (06h)
                     |_VAL2FLD(QUADSPI_CCR_IMODE, 1);            // Instruction on a single line
-    while(!(QUADSPI->SR & QUADSPI_SR_TCF))temp2 = QUADSPI->DR;                     // Transfer complete flag
+    while(!(QUADSPI->SR & QUADSPI_SR_TCF))  QUADSPI->DR;                     // Transfer complete flag
     while(QUADSPI->SR & QUADSPI_SR_BUSY);
     QUADSPI->FCR = QUADSPI_FCR_CSMF|QUADSPI_FCR_CTCF|QUADSPI_FCR_CTEF|QUADSPI_FCR_CTOF; // reset flags
     delay(10);
@@ -151,7 +151,7 @@ void qspi_sektor_wire (uint8_t* data, uint32_t adress)
                         |_VAL2FLD(QUADSPI_CCR_IMODE, 1)         // Instruction on a single line
                         |_VAL2FLD(QUADSPI_CCR_INSTRUCTION, 0x05);   /// Read Status Register-1
     while(!(QUADSPI->SR & QUADSPI_SR_SMF));                     // Status Match Flag
-    while(QUADSPI->SR & QUADSPI_SR_FTF)temp2 = QUADSPI->DR;
+    while(QUADSPI->SR & QUADSPI_SR_FTF)  QUADSPI->DR;
     QUADSPI->FCR = QUADSPI_FCR_CSMF|QUADSPI_FCR_CTCF|QUADSPI_FCR_CTEF|QUADSPI_FCR_CTOF; // reset flags
     delay(100);
 
@@ -160,7 +160,7 @@ void qspi_sektor_wire (uint8_t* data, uint32_t adress)
  do{
     QUADSPI->CCR = _VAL2FLD(QUADSPI_CCR_INSTRUCTION, 0x06)      /// Write Enable (06h)
                         |_VAL2FLD(QUADSPI_CCR_IMODE, 1);        // Instruction on a single line
-    while(!(QUADSPI->SR & QUADSPI_SR_TCF))temp2 = QUADSPI->DR;                     // Transfer complete flag
+    while(!(QUADSPI->SR & QUADSPI_SR_TCF)) QUADSPI->DR;                     // Transfer complete flag
     while(QUADSPI->SR & QUADSPI_SR_BUSY);
     QUADSPI->FCR = QUADSPI_FCR_CSMF|QUADSPI_FCR_CTCF|QUADSPI_FCR_CTEF|QUADSPI_FCR_CTOF; // reset flags
     delay(100);

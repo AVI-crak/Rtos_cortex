@@ -2,7 +2,7 @@
  @file    monitor.h
  @author  AVI-crak
  @version V-52%
- @date    25-января-2017
+ @date    2021:11:21
  @brief   Аxis sRtoS, Cortex-M7 ARM GCC EmBitz
 
  license
@@ -23,6 +23,7 @@
  extern "C" {
 #endif /* __cplusplus */
 
+/// eb_buf 256,128,64,32,16,8,4
 #define eb_buf_zize_out     256
 #define eb_buf_zize_in      64
 
@@ -33,16 +34,18 @@ extern char m_ms_buf[eb_buf_zize_in];
 /// Print message to EB monitor
 /// \n newline, \t tab, \f clear
 /// \b position minus 1 character, \r position zero-based string.
-void monitor_print (char* text);
+
+/// print text no os
+void M_print (char* text);
 
 /// Print without OS
-void monitor_print2 (char* text);
+void M_print_OS (char* text);
 
 /// Receive message from EB monitor
-char *monitor_scan (void);
+char *M_scan (void);
 
-/// Проверка свободного места
-uint32_t monitor_balance(void);
+/// Free space check
+uint32_t M_balance(void);
 
 
 

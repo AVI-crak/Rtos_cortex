@@ -30,7 +30,7 @@
 #include "stm32f7xx.h"
 
 /// Включение отладочной информации 0/1
-#define __Test_psp 0
+#define __Test_psp 1
 
 struct _os_basic
 {
@@ -44,7 +44,7 @@ struct _os_basic
     uint16_t use_nvic_size;                 ///#26- Использованный стек прерываний
     struct task* main_task;	                ///#28- Адрес стека main
     uint32_t* use_task_stop;                ///#32- Последний адрес стека, Stack last address
-    const uint32_t tick_1ms;                ///#36- Таймер активности задачи 100%, Task activity timer 100%
+    const int32_t tick_1ms;                 ///#36- Таймер активности задачи 100%, Task activity timer 100%
     const volatile int32_t system_us;       ///#40- Системное время, System time counter
     const uint32_t* malloc0_start;          ///#44- Первый адрес malloc0, First malloc0 address
     volatile uint32_t* malloc0_stop;        ///#48- Последний адрес malloc0, Last malloc0 address
