@@ -1,12 +1,10 @@
 /**
  @file    monitor.h
  @author  AVI-crak
- @version V-52%
- @date    2021:11:21
- @brief   Аxis sRtoS, Cortex-M7 ARM GCC EmBitz
-
- license
- Million helicopters and one cent.
+ @version V-90%
+ @date    january 2022
+ @brief   Cortex ARM, GCC, EmBitz
+ license MIT (Massachusetts Institute of Technology)
 
  discussion forum
  http://forum.ixbt.com/topic.cgi?id=48:11735
@@ -23,20 +21,21 @@
  extern "C" {
 #endif /* __cplusplus */
 
-/// eb_buf 256,128,64,32,16,8,4
+/// recommended size 256,128,64,
 #define eb_buf_zize_out     256
 #define eb_buf_zize_in      64
 
 
 
-extern char m_ms_buf[eb_buf_zize_in];
-
 /// Print message to EB monitor
 /// \n newline, \t tab, \f clear
 /// \b position minus 1 character, \r position zero-based string.
 
-/// print text no os
+/// send string without OS
 void M_print (char* text);
+
+/// send character without OS
+void M_print_ch (char letter);
 
 /// Print without OS
 void M_print_OS (char* text);
@@ -46,9 +45,6 @@ char *M_scan (void);
 
 /// Free space check
 uint32_t M_balance(void);
-
-
-
 
 #ifdef __cplusplus
 }
