@@ -1,21 +1,40 @@
-/// sPrint.h
-/// печать без указания типа параметра, в разнобой
-/// без зависимостей от внешних библиотек
-/// printo("текст", double, float, uint(8-16-32-64)_t, int(8-16-32-64)_t )
-/// размер - 1907 байт при агрессивной оптимизации
-/// на вкус и цвет... добавить собственную функцию печати в
-/// soft_print()
+/**
+#include "sPrint.h"
+ @file+   "sPrint.h"
+ @author  AVI-crak
+ @version V-90%
+ @date    january 2022
+ @brief   Cortex ARM, GCC, EmBitz
+ license MIT (Massachusetts Institute of Technology)
+
+ intended purpose - macro printo();
+ printo("text", double, float, uint(8-16-32-64)_t, int(8-16-32-64)_t )
+ printing without specifying the type of the variable,
+ up to 9 variables and constants at a time,
+ has no external dependencies,
+ all functions are thread independent,
+ minimum weight +140 bytes, complete set 1684 bytes,
+ maximum speed 20~470 ticks,
+ does not use division and floating point,
+ optimized for ARM
+
+ discussion forum
+ http://forum.ixbt.com/topic.cgi?id=48:11735
+
+ repository
+ https://github.com/AVI-crak/Rtos_cortex
+*/
 
 #ifndef _sPrinto_
-
 #include <stdint.h>
 
-#include "monitor.h" /// используется функция печати monitor_print(txt)
-/// количество  9-22
+#include "monitor.h" /// my version M_print(txt)
+
+/// determine the number of characters for numbers
 #define OUT_TXT_SIZE_FLOATING  22
 
-
-static void soft_print(char* txt){ M_print_OS (txt);};
+///define a text string output function
+static inline void soft_print(char* txt){ M_print(txt);};
 
 
 

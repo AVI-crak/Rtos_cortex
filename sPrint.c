@@ -1,10 +1,28 @@
-/// sPrint.c
-/// печать без указани€ типа параметра, в разнобой
-/// без зависимостей от внешних библиотек
-/// printo("текст", double / float / uint(8-32-64)_t / int(8-32-64)_t )
-/// размер - 1907 байт при агрессивной оптимизации
-/// на вкус и цвет... добавить собственную функцию печати в
-/// soft_print()
+/**
+ @file+   "sPrint.c"
+ @author  AVI-crak
+ @version V-90%
+ @date    january 2022
+ @brief   Cortex ARM, GCC, EmBitz
+ license MIT (Massachusetts Institute of Technology)
+
+ intended purpose - macro printo();
+ printo("text", double, float, uint(8-16-32-64)_t, int(8-16-32-64)_t )
+ printing without specifying the type of the variable,
+ up to 9 variables and constants at a time,
+ has no external dependencies,
+ all functions are thread independent,
+ minimum weight +140 bytes, complete set 1684 bytes,
+ maximum speed 20~470 ticks,
+ does not use division and floating point,
+ optimized for ARM
+
+ discussion forum
+ http://forum.ixbt.com/topic.cgi?id=48:11735
+
+ repository
+ https://github.com/AVI-crak/Rtos_cortex
+*/
 
 #include "sPrint.h"
 
@@ -67,9 +85,8 @@ const uint32_t data_of10raw[129] = {
 2113178124,1384892417,907603094,594806765,3898125605,2554675596,1674232198,1097224813,719077255,};
 
 
-
-const char txt_NaN[] = "NaN";
-char* floating_char(uint32_t massa, uint32_t of10raw, int32_t feeze, int32_t order10, char* txt);
+char* floating_char(char* txt, uint32_t massa, uint32_t of10raw, int32_t order10 , int32_t feeze);
+const char reserve_char[10] = { '0',0,'i','n','f',0,'N','a','N',0,};
 
 
 __attribute__ ((optimize("-Os"))) char* hex_char(char* tail_txt, uint32_t value)//44
@@ -88,7 +105,7 @@ __attribute__ ((optimize("-Os"))) char* hex_char(char* tail_txt, uint32_t value)
     return tail_txt;
 };
 
-__attribute__ ((optimize("-Os"))) char * i32_char(char* tail_txt, int32_t value)//32
+__attribute__ ((optimize("-O3"))) char * i32_char(char* tail_txt, int32_t value)//32
 {
     if (value < 0){
         value = 0 - value;
@@ -98,8 +115,7 @@ __attribute__ ((optimize("-Os"))) char * i32_char(char* tail_txt, int32_t value)
     return tail_txt;
 };
 
-
-__attribute__ ((optimize("-Os"))) char* u32_char (char* tail_txt, uint32_t value)//40
+__attribute__ ((optimize("-O3"))) char* u32_char (char* tail_txt, uint32_t value)//40
 {
     *tail_txt = 0;
     uint32_t res, tmp;
@@ -159,7 +175,6 @@ __attribute__ ((optimize("-Os")))char* u64_char (char* tail_txt, uint64_t value)
     return tail_txt;
 };
 
-
 __attribute__ ((optimize("-Os"))) void compress_char(char* tex_in, char* tex_out)//68
 {
     int32_t ovr;
@@ -183,128 +198,89 @@ __attribute__ ((optimize("-Os"))) void compress_char(char* tex_in, char* tex_out
     };
 };
 
-
-__attribute__ ((optimize("-Os")))char* float_char(char* text, float value )//164
+__attribute__ ((optimize("-Os"))) char* float_char(char* text, float value )//160
 {
     union float_raw    ftemp;
     ftemp.f_raw = value;
-    char *tex, *ter; tex = text;
-    if (ftemp.sign) { tex++; *text = '-';}else *text = 0;
-    ftemp.sign = 0;
-    if (ftemp.u_raw == 0) ter = "0";
-    else if (ftemp.u_raw < 0x7f800000)
+    uint32_t order, of10raw, massa ;
+    int32_t feeze, order10;
+    char *tex;
+    massa = ftemp.u_raw;
+
+    if (massa >> 31) order = 45;else order = 0;
+    *text = order;
+    tex = text + (order >> 5);
+    order = 0;
+    massa &= 0x7FFFFFFF;
+    if (massa > 0x7F800000UL) order = 6;
+    else  if (massa == 0x7F800000UL) order = 2;
+    else if (massa != 0)
     {
-        uint32_t order, massa, of10raw, cis;
-        int32_t feeze, order10;
-        order = ftemp.order;
-        massa = ftemp.massa;
-        cis = (order + 896) >> 4;
-        feeze = order & 0x000F;
-        if (feeze > 7) {cis++; feeze -= 16;};
-        order10 = data_otner[cis];
-        of10raw = data_of10raw[cis];
-        if (order == 0)
+        order = massa >> 23;
+        feeze =  0x0F & order;
+        massa <<= 8;
+        if (order != 0)
         {
-            massa <<= 9;
+            uint32_t cis;
+            cis = order >> 4;
+            if (feeze > 7) {feeze -= 16;cis += 0x39;}
+            else cis += 0x38;
+            order10 = data_otner[cis];
+            of10raw = data_of10raw[cis];
+            massa |=  1 << 31;
+        }else
+        {
+            order10 = data_otner[56];
+            of10raw = data_of10raw[56];
+            massa <<= 1;
             if ((massa & 0x80000000) == 0){
             do{
                 if (of10raw < 858993459UL) {order10--; of10raw *= 5UL;}
                 else of10raw >>= 1;
                 massa <<= 1;
             }while ((massa & 0x80000000) == 0);};
+        };
+        text = floating_char(text ,massa, of10raw, order10, feeze );
+        return text;
+    };
+    char une;
+    char* res = (char*) &reserve_char[0];
+    res +=order;
+    do{ une = *res++; *tex++ = une;}while(une);
+    return text;
+};
+
+__attribute__ ((optimize("-Os"))) char* double_char(char* text, double value )//196
+{
+    union double_raw    dtemp;
+    dtemp.d_raw = value;
+    uint32_t order, of10raw, massa ;
+    int32_t feeze, order10;
+    char *tex;
+
+    if (dtemp.sign) order = 45;else order = 0;
+    *text = order;
+    tex = text + (order >> 5);
+    order = 0;
+    dtemp.sign = 0;
+    if (dtemp.u64_raw > 0x7FF0000000000000ULL) order = 6;
+    else  if (dtemp.u64_raw == 0x7FF0000000000000ULL) order = 2;
+    else if (dtemp.u64_raw != 0){
+        order = dtemp.order;
+        feeze =  0x0F & order;
+        if (order != 0)
+        {
+            uint32_t cis = order >> 4;
+            feeze = order & 0x000F;
+            if (feeze > 7) {cis++; feeze -= 16;};
+            order10 = data_otner[cis];
+            of10raw = data_of10raw[cis];
+            massa = dtemp.u64_raw >> 21;
+            massa |= (uint32_t) 1 << 31;
         }else
         {
-            massa <<= 8;
-            massa |= (uint32_t) 1 << 31;
-        };
-        text = floating_char(massa, of10raw, feeze, order10, text);
-        return text;
-    }else if (ftemp.u_raw > 0x7f800000) ter = "NaN";
-    else ter = "inf";
-    uint8_t tmp;
-    do{tmp = *ter++; *tex++ = tmp;}while(tmp);
-    return text;
-};
-/*
-__attribute__ ((optimize("-Os"))) char* double_char(char* text, double value )//204
-{
-    union double_raw    dtemp;
-    dtemp.d_raw = value;
-    int_fast8_t sign;
-    uint32_t order;
-    uint32_t massa, of10raw;
-    int32_t feeze, order10, cis;
-    sign = dtemp.sign; order = dtemp.order;
-
-    feeze = 0;
-    if (sign)  text[feeze++] = '-';else text[feeze] = 0;
-    if (order == 2047)
-    {
-        if (dtemp.massa == 0)
-        {
-            text[feeze++] = 'I'; text[feeze++] = 'i';
-            text[feeze++] = 'f'; text[feeze] = 0;
-            return text;
-        }else return (char*)&txt_NaN[0];
-    }else if ((order == 0) && (dtemp.massa == 0))
-    {
-        text[feeze++] = '0';
-        text[feeze] = 0;
-        return text;
-    };
-
-    cis = order >> 4;
-    feeze = order & 0x000F;
-    if (feeze > 7) {cis++; feeze -= 16;};
-    order10 = data_otner[cis];
-    of10raw = data_of10raw[cis];
-
-    if (order == 0)
-    {
-        dtemp.u64_raw <<= 12;
-        if (dtemp.sign == 0){
-        do{
-            dtemp.u64_raw <<= 1;
-            if (of10raw < 858993459UL)
-                {
-                    order10--;
-                    of10raw *= 5;
-                }else of10raw >>= 1;
-        }while (dtemp.sign == 0);};
-        massa = dtemp.u_raw[1];
-    }else
-    {
-        dtemp.u64_raw <<= 11;
-        massa = dtemp.u_raw[1];
-        massa |= (uint32_t) 1 << 31;
-    };
-
-    text = floating_char( massa, of10raw, feeze,  order10, text);
-    return text;
-};
-*/
-
-__attribute__ ((optimize("-Os"))) char* double_char(char* text, double value )//204
-{
-    union double_raw    dtemp;
-    dtemp.d_raw = value;
-    char *tex, *ter; tex = text;
-    if (dtemp.sign) { tex++; *text = '-';}else *text = 0;
-    dtemp.sign = 0;
-    if (dtemp.u64_raw == 0) ter = "0";
-    else if (dtemp.u64_raw < 0x7FF0000000000000)
-    {
-        uint32_t order, massa, of10raw, cis;
-        int32_t feeze, order10;
-        order = dtemp.order;
-        cis = order >> 4;
-        feeze = order & 0x000F;
-        if (feeze > 7) {cis++; feeze -= 16;};
-        order10 = data_otner[cis];
-        of10raw = data_of10raw[cis];
-
-        if (order == 0)
-        {
+            order10 = data_otner[0];
+            of10raw = data_of10raw[0];
             dtemp.u64_raw <<= 12;
             if (dtemp.sign == 0){
             do{
@@ -316,22 +292,18 @@ __attribute__ ((optimize("-Os"))) char* double_char(char* text, double value )//
                     }else of10raw >>= 1;
             }while (dtemp.sign == 0);};
             massa = dtemp.u_raw[1];
-        }else
-        {
-            dtemp.u64_raw <<= 11;
-            massa = dtemp.u_raw[1];
-            massa |= (uint32_t) 1 << 31;
         };
-        text = floating_char( massa, of10raw, feeze,  order10, text);
+        text = floating_char(text ,massa, of10raw, order10, feeze );
         return text;
-    }else if (dtemp.u64_raw > 0x7FF0000000000000) ter = "NaN";
-    else ter = "inf";
-    uint8_t tmp;
-    do{tmp = *ter++; *tex++ = tmp;}while(tmp);
+    };
+    char une;
+    char* res = (char*) &reserve_char[0];
+    res +=order;
+    do{ une = *res++; *tex++ = une;}while(une);
     return text;
 };
 
-__attribute__((optimize("-Os"))) char* floating_char(uint32_t massa, uint32_t of10raw, int32_t feeze, int32_t order10, char* txt)//204
+__attribute__((optimize("-Os"))) char* floating_char(char* txt, uint32_t massa, uint32_t of10raw, int32_t order10 , int32_t feeze)//180
 {
     if (feeze > 0)
     {
@@ -447,7 +419,14 @@ void tabl_grabl(void)
 
 
 ///-------------------------
-/** test
+/**
+216MGz
+float = 351tik   +1280b          printf float = 5259tik  +8208b
+double = 301tik  +1376b          printf double = 1570tik  +8208b
+int64_t = 487tik +192b           printf int64_t = 3387tik  +8236b
+int32_t = 150tik +140b           printf int32_t = 745tik  +8208b
+all_format + 1684b
+test
 printo("\f 0.0f                = ", 0.0f );
 printo("\n 1.0f                = ", 1.0f," \t\t -1uL = ", 9.99999940395e-1f );
 printo("\n -1.23456788063f     = ", -1.23456788063f," \t -1uL = ", -1.23456776142f );
@@ -537,15 +516,15 @@ printo("\n 4.00771360797e-43f  = ", 4.00771360797e-43f," \t -1uL = ", 3.99370062
 printo("\n 1.40129846432e-45f  = ", 1.40129846432e-45f," float min");
 
 
-printo("\n 2.2e-307d           = ", 2.2e-307d);
+printo("\n 4.940656458e-324d   = ", 4.9406564584124654e-324d);
 printo("\n 2.000000001d        = ", 2.000000001d);
-printo("\n 1.999999999d        = ", 1.999999999d);
-printo("\n 9.999999999d        = ", 9.999999999d);
-printo("\n 3.21654987e-3d      = ", 3.21654987e-3d);
-printo("\n 1.74554255000e-288d = ", 1.74554255000e-288d);
-printo("\n 3.243552454547e+66d = ", 3.243552454547e+66d);
-printo("\n 7.345624524111e+24d = ", 7.345624524111e+24d);
-printo("\n 1.2345678912345678d = ", 1.2345678912345678d);
+printo("\n 1.999999999d        = ", 1.999999999999d);
+printo("\n 9.999999999d        = ", 9.999999999999d);
+printo("\n 5.555555555e-51d   = ", 5.555555555555e-51d);
+printo("\n 1.111111111e111d   = ", 1.111111111111e111d );
+printo("\n 2.222222222e222d   = ", 2.222222222222e222d );
+printo("\n -4.444444444e-44d  = ", -4.444444444444e-44d );
+printo("\n 8.888888888e88d     = ", 8.88888888888e88d);
 
 printo("\n -4567891234567891234          =", -4567891234567891234LL);
 printo("\n -456789123456789123           =", -456789123456789123LL);
