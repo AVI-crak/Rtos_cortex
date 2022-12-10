@@ -30,11 +30,14 @@
 
 #include "monitor.h" /// my version M_print(txt)
 
-/// determine the number of characters for numbers
-#define OUT_TXT_SIZE_FLOATING  22
+/// determine the number of characters for numbers (6-20)
+#define OUT_TXT_SIZE_FLOATING  20
+
+///round floating point by (0,2-8) characters
+#define ROUND_FLOAT    0
 
 ///define a text string output function
-static inline void soft_print(char* txt){ M_print(txt);};
+static inline void soft_print(char* txt){ M_print_OS(txt);};
 
 
 
@@ -44,11 +47,20 @@ char* u64_char(char* tail_txt, uint64_t value);
 char* i64_char(char* tail_txt, int64_t value);
 char* float_char(char* text, float value);
 char* double_char(char* text, double value);
-char* hex_char(char* tail_txt, uint32_t value);
+char* hex_char(char* tail_txt, uintptr_t value);
 void compress_char(char* tex_in, char* tex_out);
 
+//void tabl_grabl(void);
 
+void test_printo (void);
 
+static inline void print__char(char value)
+{
+    char print_buf4[4];
+    print_buf4[0] = value;
+    print_buf4[1] = 0;
+    soft_print(&print_buf4[0]);
+};
 
 static inline void soft_print_con(const char* txt)
 {
@@ -134,7 +146,7 @@ static inline void print_double(double value)
     soft_print(double_char(&print_buf_d[0], value));
 };
 
-static inline void print_hex(uint32_t value)
+static inline void print_hex(uintptr_t value)
 {
     char print_buf_hex[12];
     soft_print(hex_char(&print_buf_hex[11],value));
@@ -149,6 +161,7 @@ static inline void print_hex(uint32_t value)
 #define dpr_(X) _Generic((X),           \
     const char*:        soft_print_con, \
     char*:              soft_print,     \
+    char:               print__char,    \
     uint8_t:            print_uint8,    \
     uint16_t:           print_uint16,   \
     uint32_t:           print_uint32,   \
@@ -192,6 +205,7 @@ static inline void print_hex(uint32_t value)
 
 static inline void dpr(char* obj) { soft_print(obj); };
 static inline void dpr(const char* obj) { soft_print_con(obj); };
+static inline void dpr(char obj ) { print__char(obj); };
 static inline void dpr(uint8_t obj ) { print_uint8(obj); };
 static inline void dpr(uint16_t obj) { print_uint16(obj); };
 static inline void dpr(uint32_t obj) { print_uint32(obj); };
@@ -208,4 +222,51 @@ template <typename T, typename ... Tail> void dpr(const T& obj, const Tail& ... 
 template<typename ... T> void printo(const T& ... obj) { dpr(obj ...);  }
 #endif
 
+#ifdef _scano_
+ extern "C" {
+#endif /* _scano_ */
 
+typedef enum
+{
+    raw_error = -1,
+    raw_i8 = 0,
+    raw_i16,
+    raw_i32,
+    raw_i64,
+    raw_u8,
+    raw_u16,
+    raw_u32,
+    raw_u64,
+    raw_float,
+    raw_double,
+}Tip_TypeDef;
+
+
+typedef struct
+{
+    union LLL_
+    {
+        uint64_t u64;
+        uint32_t u32[2];
+        uint16_t u16[4];
+        uint8_t  u8[8];
+        int64_t  i64;
+        int32_t  i32[2];
+        int16_t  i16[4];
+        int8_t   i8[8];
+        float    flo[2];
+        double   dou;
+    }L;
+    char*        txt;
+    uint8_t      Lsize;
+    Tip_TypeDef  Traw;
+}Raw_TypeDef;
+
+
+Raw_TypeDef scano(char* txt);
+
+
+#ifdef _scano_
+}
+#endif /* _scano_ */
+#define _scano_
