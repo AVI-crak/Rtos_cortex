@@ -34,7 +34,7 @@
 #define OUT_TXT_SIZE_FLOATING  20
 
 ///round floating point by (0,2-8) characters
-#define ROUND_FLOAT    0
+#define ROUND_FLOAT    7
 
 ///define a text string output function
 static inline void soft_print(char* txt){ M_print_OS(txt);};

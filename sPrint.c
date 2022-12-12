@@ -131,29 +131,29 @@ __attribute__ ((optimize("-O3"))) char* u32_char (char* tail_txt, uint32_t value
     return tail_txt;
 };
 
-char* massa_char (char* tail_txt, uint32_t value)
+char* massa_char (char* tail_txt, uint32_t value) // 76
 {
-    *tail_txt = 0;
-    uint32_t res, tmp;
-    int32_t cn = 9 - ROUND_FLOAT;
-    tmp = 499999999UL - (value >> 1);
-    cn -= (int32_t) tmp >> 31;
+    uint32_t res, tmmp;
+    uint32_t cn = 0;
+    *tail_txt = cn;
+    tmmp = 3294967296UL;
+    cn += (((uint64_t) tmmp + value) >> 32) + (9 - ROUND_FLOAT);
     do{
-        tmp = ((uint64_t) value * 3435973837UL >> 32);
+        tmmp = ((uint64_t) value * 3435973837UL >> 32);
         res = value + '0';
-        value = tmp >> 3;
-        res -= value * 10;
-        --cn;
-        if (cn < 0) *(--tail_txt) = res;
-        else
+        value = tmmp >> 3;
+        tmmp = value + (value << 2);
+        res -= tmmp << 1;
+        if (cn != 0)
         {
-            *(--tail_txt) = '0';
-            if  (res > '5') value++;
+            tmmp = '5' - res;
+            res = '0';
+            if (--cn == 0) value -= (int32_t) tmmp >> 31;
         };
+        *(--tail_txt) = res;
     }while (value > 0);
     return tail_txt;
 };
-
 __attribute__ ((optimize("-Os"))) char* i64_char(char* tail_txt, int64_t value)//32
 {
     if (value >= 0) tail_txt = u64_char(tail_txt, value);
@@ -227,7 +227,6 @@ __attribute__ ((optimize("-Os"))) char* float_char(char* text, float value )//13
     union float_raw    ftemp;
     ftemp.f_raw = value;
     uint32_t feeze, of10raw, cis;
-    int32_t order10;
     feeze = (int32_t)ftemp.u_raw >> 31;
     cis = 45 & feeze;
     *text = cis;
@@ -307,7 +306,7 @@ __attribute__ ((optimize("-Os"))) char* double_char(char* text, double value )//
     return text;
 };
 
-__attribute__((optimize("-Os"))) char* floating_char(char* txt, uint32_t massa, int32_t feeze)//208
+__attribute__((optimize("-Os"))) char* floating_char(char* txt, uint32_t massa, int32_t feeze)//208-292
 {
 
     uint32_t of10raw, cis;
@@ -517,6 +516,7 @@ ggtt.u_raw[1] = 0;
 printo("\n 0     float         = ", ggtt.f_raw[1]);
 ggtt.u_raw[1] = 0x80000000;
 printo("\n -0    float         = ", ggtt.f_raw[1]);
+printo("\n 1.11111111111d      = ", 1.11111111111d );
 printo("\n -1.0f               = ", -1.0f," \t\t -1uL = ", -9.99999940395e-1f );
 printo("\n 1.5f                = ", 1.5f," \t\t -1uL = ", 1.49999988079f );
 printo("\n -2e+2f              = ", -2e+2f," \t\t -1uL = ", -1.99999984741e+2f );
